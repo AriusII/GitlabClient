@@ -1,0 +1,92 @@
+using GitLab.Client.Domain;
+using GitLab.Client.Models;
+
+namespace GitLab.Client.Abstractions;
+
+/// <summary>
+///     Wraps the GitLab "CI variables" API area for all three variable scopes: project
+///     (<c>/projects/:id/variables</c>), group (<c>/groups/:id/variables</c>) and instance
+///     (<c>/admin/ci/variables</c>).
+///     <para>
+///         The instance methods require an administrator token; every other token gets a <c>403</c>, so
+///         a library consumer that is not running as an admin should treat them as unavailable rather
+///         than as a transient failure.
+///     </para>
+///     <para>
+///         Variable values are secrets. Nothing in this library logs a request body, and a variable
+///         created with <see cref="CreateVariableRequest.MaskedAndHidden" /> comes back with a null
+///         <see cref="GitLabVariable.Value" /> forever after - GitLab will not disclose it again, not even
+///         to the token that created it.
+///     </para>
+/// </summary>
+public interface IVariablesClient
+{
+    IAsyncEnumerable<GitLabVariable> ListProjectVariablesAsync(ProjectId projectId,
+        VariableListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Reads one project variable. Supply <paramref name="environmentScope" /> to disambiguate a key that
+    ///     exists in several environment scopes; without it GitLab returns whichever it matches first.
+    /// </summary>
+    Task<GitLabVariable> GetProjectVariableAsync(ProjectId projectId, string key, string? environmentScope = null,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabVariable> CreateProjectVariableAsync(ProjectId projectId, CreateVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabVariable> UpdateProjectVariableAsync(ProjectId projectId, string key, UpdateVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Deletes one project variable. Supply <paramref name="environmentScope" /> to target a specific
+    ///     scope of a key that exists more than once.
+    /// </summary>
+    Task DeleteProjectVariableAsync(ProjectId projectId, string key, string? environmentScope = null,
+        CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabVariable> ListGroupVariablesAsync(GroupId groupId, VariableListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabVariable> GetGroupVariableAsync(GroupId groupId, string key,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabVariable> CreateGroupVariableAsync(GroupId groupId, CreateVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabVariable> UpdateGroupVariableAsync(GroupId groupId, string key, UpdateVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteGroupVariableAsync(GroupId groupId, string key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every instance-level CI/CD variable. Administrator only, and there is exactly one
+    ///     instance scope, so this takes no id.
+    /// </summary>
+    IAsyncEnumerable<GitLabVariable> ListInstanceVariablesAsync(VariableListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Reads one instance variable. Unlike the project form there is no environment-scope filter:
+    ///     instance variables are always scoped to <c>*</c>, so a key identifies exactly one variable.
+    /// </summary>
+    Task<GitLabVariable> GetInstanceVariableAsync(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Creates an instance variable. GitLab ignores
+    ///     <see cref="CreateVariableRequest.EnvironmentScope" /> and
+    ///     <see cref="CreateVariableRequest.MaskedAndHidden" /> at this scope - the request record is shared
+    ///     with the project and group forms, which do honour them.
+    /// </summary>
+    Task<GitLabVariable> CreateInstanceVariableAsync(CreateVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Updates an instance variable. <see cref="UpdateVariableRequest.EnvironmentScope" /> is ignored
+    ///     at this scope.
+    /// </summary>
+    Task<GitLabVariable> UpdateInstanceVariableAsync(string key, UpdateVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes an instance variable.</summary>
+    Task DeleteInstanceVariableAsync(string key, CancellationToken cancellationToken = default);
+}

@@ -1,0 +1,31 @@
+<Project>
+
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"/>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!--
+      Writes generated Service/Controller sources to disk so they're inspectable and debuggable.
+      Deliberately a LITERAL path, not "$(BaseIntermediateOutputPath)Generated" - BaseIntermediateOutputPath
+      is an SDK-defined property that doesn't exist yet during .props evaluation (props import before
+      the SDK), so that would silently resolve to just "Generated" relative to the project - landing
+      inside the default source glob and double-compiling every generated type (CS0102). See the
+      "Build configuration" section of CLAUDE.md.
+    -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>obj\Generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="obj\Generated\**\*.cs"/>
+  </ItemGroup>
+
+</Project>

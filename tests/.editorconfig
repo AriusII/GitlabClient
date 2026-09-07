@@ -1,0 +1,3 @@
+# Test-naming and micro-perf rules that don't apply to test code.
+[*.cs]
+dotnet_diagnostic.CA1707.severity = none

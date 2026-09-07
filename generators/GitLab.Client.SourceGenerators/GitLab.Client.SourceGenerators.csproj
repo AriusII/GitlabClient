@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>GitLab.Client.SourceGenerators</AssemblyName>
+    <RootNamespace>GitLab.Client.SourceGenerators</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ExcludeAssets="runtime" keeps Roslyn out of the generator's output directory: csc loads the
+         analyzer next to its own Microsoft.CodeAnalysis, and shipping a second copy would risk it
+         binding the wrong one. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" ExcludeAssets="runtime"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" ExcludeAssets="runtime"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Analyzer release tracking (RS2008): every GLCxxxx descriptor this assembly declares has to be
+         listed here, so adding or renumbering a diagnostic is a reviewable diff rather than a silent
+         change in what breaks a consumer's build. -->
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md"/>
+  </ItemGroup>
+
+</Project>

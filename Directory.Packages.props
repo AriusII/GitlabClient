@@ -1,0 +1,37 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup Label="GitLab.Client">
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+  </ItemGroup>
+  <ItemGroup Label="Tests">
+    <!-- xUnit v3 (package family renamed from "xunit"). MTP (Microsoft.Testing.Platform) v2 is the
+         execution engine xunit.v3 4.0.0 ships with; xunit.runner.visualstudio + Microsoft.NET.Test.Sdk
+         are kept only for VSTest/IDE Test Explorer compatibility alongside MTP, not as a replacement for it. -->
+    <PackageVersion Include="xunit.v3" Version="4.0.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+  </ItemGroup>
+  <ItemGroup Label="Analyzers">
+    <GlobalPackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.400" />
+    <!-- Referenced only by src/GitLab.Client, deliberately NOT global: the GitLabJsonContext guard
+         test legitimately calls JsonSerializerContext.GetTypeInfo(Type), which BannedSymbols.txt
+         bans. 5.6.0 is the newest published version - this package does not track the 5.9.0
+         Microsoft.CodeAnalysis.* line below, so "aligning" it to 5.9.0 breaks restore with NU1102. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+  </ItemGroup>
+  <ItemGroup Label="SourceGenerators">
+    <!-- global.json pins the exact SDK this repo builds with, so the only CS9057 ("newer compiler
+         than is currently running") risk is whether that SDK's bundled Roslyn is >= this version -
+         verified true for 10.0.400. If global.json's SDK version moves backwards, or the generator
+         starts failing to load with CS9057, drop this to the oldest version with the APIs in use
+         (AddEmbeddedAttributeDefinition needs >= 4.14.0) rather than chasing latest. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
+  </ItemGroup>
+</Project>

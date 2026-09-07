@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/generators/">
+    <Project Path="generators/GitLab.Client.SourceGenerators/GitLab.Client.SourceGenerators.csproj"/>
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/GitLab.Client.AotHarness/GitLab.Client.AotHarness.csproj"/>
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/GitLab.Client/GitLab.Client.csproj"/>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GitLab.Client.Tests/GitLab.Client.Tests.csproj"/>
+  </Folder>
+</Solution>

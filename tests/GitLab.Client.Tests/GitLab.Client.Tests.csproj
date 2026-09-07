@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>GitLab.Client.Tests</AssemblyName>
+    <RootNamespace>GitLab.Client.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3"/>
+    <!-- VSTest/IDE Test Explorer compatibility alongside MTP; see Directory.Packages.props. -->
+    <PackageReference Include="xunit.runner.visualstudio"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <!-- Drives both source generators directly through CSharpGeneratorDriver, so generator diagnostics
+         and incrementality can be asserted on - neither is observable from the generated output alone. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GitLab.Client\GitLab.Client.csproj"/>
+    <!-- A NORMAL reference, unlike GitLab.Client's OutputItemType="Analyzer"
+         ReferenceOutputAssembly="false" one: the tests need the generator types as a library. -->
+    <ProjectReference Include="..\..\generators\GitLab.Client.SourceGenerators\GitLab.Client.SourceGenerators.csproj"/>
+  </ItemGroup>
+
+</Project>
