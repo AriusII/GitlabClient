@@ -86,4 +86,14 @@ internal sealed class DeployKeysRepository(IGitLabApiConnection connection) : ID
             GitLabJsonContext.Default.GitLabDeployKey,
             cancellationToken);
     }
+
+    public IAsyncEnumerable<GitLabDeployKey> ListForUserAsync(long userId,
+        UserProjectDeployKeyListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return connection.GetPagedAsync(
+            GitLabRouteBuilder.Create("users").Segment(userId).Literal("project_deploy_keys").QueryFrom(options)
+                .Build(),
+            GitLabJsonContext.Default.GitLabDeployKeyArray,
+            cancellationToken);
+    }
 }

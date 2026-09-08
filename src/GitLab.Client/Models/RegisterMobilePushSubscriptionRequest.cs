@@ -10,6 +10,7 @@ public sealed record RegisterMobilePushSubscriptionRequest
     /// <summary>The hexadecimal APNs device token.</summary>
     public required string DeviceToken { get; init; }
 
+    /// <summary>The device platform. GitLab's spec currently enumerates only iOS.</summary>
     public GitLabMobileDevicePlatform? Platform { get; init; }
 
     /// <summary>Defaults to <see cref="GitLabPushSubscriptionApnsEnvironment.Production" /> when omitted.</summary>
@@ -27,5 +28,6 @@ public sealed record RegisterMobilePushSubscriptionRequest
     /// <summary>The device locale.</summary>
     public string? Locale { get; init; }
 
+    /// <summary>Whether notifications should carry full content or only identifiers the device fetches itself.</summary>
     public GitLabPushSubscriptionPayloadMode? PayloadMode { get; init; }
 }

@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 
 using GitLab.Client.Abstractions;
 using GitLab.Client.Abstractions.Exceptions;
@@ -602,5 +604,264 @@ public sealed class JobsRepositoryTests
 
         Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
         Assert.Equal("404 Job Not Found", exception.Message);
+    }
+
+    // ---- Runner protocol: POST /jobs/request, PUT /jobs/:id, /jobs/:id/artifacts, PATCH /jobs/:id/trace ----
+
+    [Fact]
+    public async Task RequestAsync_PostsToTheBareJobsRequestRoute_AndDeserializesTheDynamicResponse()
+    {
+        const string Json = """{ "id": "10", "token": "abcd1234", "allow_git_fetch": "false" }""";
+
+        string? sentBody = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            return new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(Json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        JsonElement response = await repository.RequestAsync(new JobRequestRequest { Token = "runner-token" },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+
+        // No project segment: the runner protocol is scoped by the runner's own token, not a project.
+        Assert.Equal("https://gitlab.example/api/v4/jobs/request", handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        Assert.NotNull(sentBody);
+        Assert.Contains("""
+                        "token":"runner-token"
+                        """, sentBody, StringComparison.Ordinal);
+
+        // The optional fields were left unset, so the WhenWritingNull policy omits them entirely.
+        Assert.DoesNotContain("system_id", sentBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("last_update", sentBody, StringComparison.Ordinal);
+
+        Assert.Equal("10", response.GetProperty("id").GetString());
+        Assert.Equal("abcd1234", response.GetProperty("token").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PutsToTheBareJobIdRoute_WithSerializedState()
+    {
+        string? sentBody = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        await repository.UpdateAsync(469,
+            new UpdateJobStateRequest { Token = "job-token", State = "success", ExitCode = 0 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+
+        // No "projects/:id/jobs" prefix - the runner protocol addresses the job directly.
+        Assert.Equal("https://gitlab.example/api/v4/jobs/469", handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        Assert.NotNull(sentBody);
+        Assert.Contains("""
+                        "state":"success"
+                        """, sentBody, StringComparison.Ordinal);
+        Assert.Contains("""
+                        "exit_code":0
+                        """, sentBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DownloadArtifactsByTokenAsync_BuildsTheTokenScopedRoute_WithoutAProjectSegment()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([0x50, 0x4B, 0x03, 0x04])
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        using GitLabFileResponse artifacts = await repository.DownloadArtifactsByTokenAsync(469,
+            new JobArtifactsByTokenDownloadOptions { Token = "job-token", DirectDownload = true },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+
+        string? requestUri = handler.LastRequest?.RequestUri?.AbsoluteUri;
+        Assert.NotNull(requestUri);
+        Assert.StartsWith("https://gitlab.example/api/v4/jobs/469/artifacts?", requestUri, StringComparison.Ordinal);
+        Assert.Contains("token=job-token", requestUri, StringComparison.Ordinal);
+        Assert.Contains("direct_download=true", requestUri, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.OK, artifacts.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadArtifactsAsync_PostsMultipartFormData_WithTheFileAndTheOptionalFields()
+    {
+        string? sentBody = null;
+        MediaTypeHeaderValue? sentContentType = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentContentType = request.Content?.Headers.ContentType;
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            return new HttpResponseMessage(HttpStatusCode.Created);
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        using MemoryStream content = new([0x1F, 0x8B]);
+        GitLabFileUpload file = new() { Content = content, FileName = "artifacts.zip" };
+
+        await repository.UploadArtifactsAsync(469, file, "job-token", "1 week",
+            GitLabJobArtifactUploadType.JUnit, GitLabJobArtifactUploadFormat.Gzip,
+            "private", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/jobs/469/artifacts", handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("multipart/form-data", sentContentType?.MediaType);
+
+        Assert.NotNull(sentBody);
+        Assert.Contains("name=file", sentBody, StringComparison.Ordinal);
+        Assert.Contains("artifacts.zip", sentBody, StringComparison.Ordinal);
+        Assert.Contains("job-token", sentBody, StringComparison.Ordinal);
+        Assert.Contains("1 week", sentBody, StringComparison.Ordinal);
+
+        // The wire values come from the enums' [JsonStringEnumMemberName]s via the generated ToApiValue(),
+        // not from the C# member names, so junit/gzip - not JUnit/Gzip - must be what went out.
+        Assert.Contains("junit", sentBody, StringComparison.Ordinal);
+        Assert.Contains("gzip", sentBody, StringComparison.Ordinal);
+        Assert.Contains("private", sentBody, StringComparison.Ordinal);
+
+        // The stream is borrowed, never owned.
+        Assert.True(content.CanRead);
+    }
+
+    [Fact]
+    public async Task UploadArtifactsAsync_OmitsFormFields_WhenNoneAreSupplied()
+    {
+        string? sentBody = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            return new HttpResponseMessage(HttpStatusCode.Created);
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        using MemoryStream content = new([0x1F, 0x8B]);
+        GitLabFileUpload file = new() { Content = content, FileName = "artifacts.zip" };
+
+        await repository.UploadArtifactsAsync(469, file,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(sentBody);
+        Assert.DoesNotContain("expire_in", sentBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("artifact_type", sentBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("artifact_format", sentBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("accessibility", sentBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AuthorizeArtifactsUploadAsync_PostsJsonBody_ToTheAuthorizeRoute()
+    {
+        string? sentBody = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        await repository.AuthorizeArtifactsUploadAsync(469,
+            new AuthorizeJobArtifactsUploadRequest
+            {
+                Token = "job-token", Filesize = 2048, ArtifactType = GitLabJobArtifactUploadType.Sast
+            },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/jobs/469/artifacts/authorize",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        Assert.NotNull(sentBody);
+        Assert.Contains("""
+                        "filesize":2048
+                        """, sentBody, StringComparison.Ordinal);
+        Assert.Contains("""
+                        "artifact_type":"sast"
+                        """, sentBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AuthorizeArtifactsUploadAsync_WithNoRequest_SendsAnEmptyJsonBody()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        await repository.AuthorizeArtifactsUploadAsync(469,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://gitlab.example/api/v4/jobs/469/artifacts/authorize",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task AppendTraceAsync_PatchesToTheTraceRoute_WithNoProjectSegment()
+    {
+        string? sentBody = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            return new HttpResponseMessage(HttpStatusCode.Accepted);
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        JobsRepository repository = new(connection);
+
+        await repository.AppendTraceAsync(469,
+            new AppendJobTraceRequest { Token = "job-token", DebugTrace = true },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Patch, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/jobs/469/trace", handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        Assert.NotNull(sentBody);
+        Assert.Contains("""
+                        "debug_trace":true
+                        """, sentBody, StringComparison.Ordinal);
     }
 }

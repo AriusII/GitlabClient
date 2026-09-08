@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using GitLab.Client.Abstractions;
 using GitLab.Client.Infrastructure.Routing;
 using GitLab.Client.Infrastructure.Serialization;
@@ -87,6 +89,17 @@ internal sealed class ApplicationsRepository(IGitLabApiConnection connection) : 
     {
         return connection.DeleteAsync(
             GitLabRouteBuilder.Create("user").Literal("applications").Segment(id).Build(),
+            cancellationToken);
+    }
+
+    public Task<JsonElement> GetWorkspacesHttpServerConfigAsync(CancellationToken cancellationToken = default)
+    {
+        // Same undocumented-schema shape as IWorkspacesRepository's two agentw endpoints: the spec
+        // declares no response schema, so this answers with a raw JsonElement rather than an invented DTO.
+        return connection.GetAsync(
+            GitLabRouteBuilder.Create("internal").Literal("agents").Literal("agentw").Literal("server_config")
+                .Build(),
+            GitLabJsonContext.Default.JsonElement,
             cancellationToken);
     }
 }

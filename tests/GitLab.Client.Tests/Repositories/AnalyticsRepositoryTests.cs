@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
+using GitLab.Client.Domain;
 using GitLab.Client.Infrastructure.Http;
 using GitLab.Client.Models;
 using GitLab.Client.Repositories;
@@ -229,5 +230,25 @@ public sealed class AnalyticsRepositoryTests
         Assert.Equal("https://gitlab.example/api/v4/projects/42/dora/metrics?metric=change_failure_rate",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal(JsonValueKind.Array, result.ValueKind);
+    }
+
+    [Fact]
+    public async Task GetProjectDoraMetricsAsync_EncodesANamespacedProjectPath()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("[]", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        AnalyticsRepository repository = new(connection);
+
+        await repository.GetProjectDoraMetricsAsync(ProjectId.FromPath("gitlab-org/gitlab"),
+            "lead_time_for_changes", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/gitlab-org%2Fgitlab/dora/metrics?metric=lead_time_for_changes",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 }

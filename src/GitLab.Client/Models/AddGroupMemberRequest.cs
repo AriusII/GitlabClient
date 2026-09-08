@@ -3,9 +3,10 @@ namespace GitLab.Client.Models;
 /// <summary>
 ///     Request body for <c>POST /groups/:id/members</c>.
 ///     <para>
-///         Separate from <see cref="AddMemberRequest" /> rather than shared with it: the group endpoint
-///         accepts a <see cref="Username" /> as an alternative to <see cref="UserId" /> and records an
-///         <see cref="InviteSource" />, and neither of those exists on the project route. Exactly one of
+///         A separate type from <see cref="AddMemberRequest" /> - one request DTO per operation, per this
+///         library's convention - even though the two shapes are now identical on the wire: GitLab's
+///         project route accepts the same <see cref="Username" />/<see cref="InviteSource" />
+///         alternative to <see cref="UserId" /> as the group route does. Exactly one of
 ///         <see cref="UserId" /> and <see cref="Username" /> must be set - GitLab rejects the call when
 ///         both or neither are present.
 ///     </para>

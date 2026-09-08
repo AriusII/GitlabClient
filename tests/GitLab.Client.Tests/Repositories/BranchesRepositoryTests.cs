@@ -105,6 +105,7 @@ public sealed class BranchesRepositoryTests
             Search = "^feature",
             Regex = "feature/.*",
             Sort = "updated_desc",
+            Page = 2,
             PageToken = "feature/login",
             PerPage = 20
         };
@@ -121,6 +122,7 @@ public sealed class BranchesRepositoryTests
         Assert.Contains("search=%5Efeature", requestUri);
         Assert.Contains("regex=feature%2F.%2A", requestUri);
         Assert.Contains("sort=updated_desc", requestUri);
+        Assert.Contains("page=2", requestUri);
         Assert.Contains("page_token=feature%2Flogin", requestUri);
         Assert.Contains("per_page=20", requestUri);
 

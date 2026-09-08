@@ -87,12 +87,14 @@ public readonly record struct GitLabRateLimitSnapshot(
                 return TimeSpan.FromSeconds(seconds);
             }
 
-            if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture,
+            if (!DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTimeOffset retryAt))
             {
-                TimeSpan delta = retryAt - DateTimeOffset.UtcNow;
-                return delta > TimeSpan.Zero ? delta : TimeSpan.Zero;
+                continue;
             }
+
+            TimeSpan delta = retryAt - DateTimeOffset.UtcNow;
+            return delta > TimeSpan.Zero ? delta : TimeSpan.Zero;
         }
 
         return null;

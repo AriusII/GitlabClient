@@ -611,6 +611,31 @@ public sealed class NotesRepositoryTests
     }
 
     [Fact]
+    public async Task GetEpicNoteAsync_EncodesNamespacedGroupPath_AndBuildsNoteRoute()
+    {
+        const string Json = """{ "id": 9001, "body": "epic comment", "noteable_type": "Epic" }""";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        NotesRepository repository = new(connection);
+
+        GitLabNote note = await repository.GetEpicNoteAsync("gitlab-org/subgroup", 11, 9001,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/gitlab-org%2Fsubgroup/epics/11/notes/9001",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(9001, note.Id);
+        Assert.Equal("Epic", note.NoteableType);
+    }
+
+    [Fact]
     public async Task CreateEpicNoteAsync_PostsToGroupEpicNotesRoute()
     {
         const string Json = """{ "id": 9002, "body": "epic comment" }""";

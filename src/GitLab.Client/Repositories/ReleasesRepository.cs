@@ -149,6 +149,51 @@ internal sealed class ReleasesRepository(IGitLabApiConnection connection) : IRel
             cancellationToken);
     }
 
+    /// <summary>
+    ///     Retrieves the project's latest release without knowing its tag name in advance. The spec declares
+    ///     no response schema for this permalink route, so the raw body is returned rather than an invented
+    ///     shape.
+    /// </summary>
+    public Task<GitLabFileResponse> GetLatestReleaseAsync(ProjectId projectId,
+        CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            LatestReleasePermalinkRoute(projectId).Build(),
+            cancellationToken);
+    }
+
+    /// <summary>
+    ///     Same permalink as <see cref="GetLatestReleaseAsync" />, with a caller path appended after
+    ///     resolving to the latest release - for example a downloads path - so the caller never needs the
+    ///     tag name up front. <paramref name="suffixPath" /> commonly contains <c>/</c>, so it is escaped
+    ///     rather than appended as a literal.
+    /// </summary>
+    public Task<GitLabFileResponse> GetLatestReleaseSuffixPathAsync(ProjectId projectId, string suffixPath,
+        CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            LatestReleasePermalinkRoute(projectId).Escaped(suffixPath).Build(),
+            cancellationToken);
+    }
+
+    /// <summary>
+    ///     Downloads one asset file attached to a release by the direct asset path recorded on its link. The
+    ///     spec declares no response schema - the body is whatever content the asset link points at.
+    /// </summary>
+    public Task<GitLabFileResponse> DownloadReleaseAssetAsync(ProjectId projectId, string tagName,
+        string directAssetPath, CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            GitLabRouteBuilder.Create("projects")
+                .Segment(projectId)
+                .Literal("releases")
+                .Escaped(tagName)
+                .Literal("downloads")
+                .Escaped(directAssetPath)
+                .Build(),
+            cancellationToken);
+    }
+
     private static GitLabRouteBuilder LinksRoute(ProjectId projectId, string tagName)
     {
         return GitLabRouteBuilder.Create("projects")
@@ -157,5 +202,14 @@ internal sealed class ReleasesRepository(IGitLabApiConnection connection) : IRel
             .Escaped(tagName)
             .Literal("assets")
             .Literal("links");
+    }
+
+    private static GitLabRouteBuilder LatestReleasePermalinkRoute(ProjectId projectId)
+    {
+        return GitLabRouteBuilder.Create("projects")
+            .Segment(projectId)
+            .Literal("releases")
+            .Literal("permalink")
+            .Literal("latest");
     }
 }

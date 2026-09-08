@@ -255,6 +255,89 @@ public sealed class PackagesNuGetRepositoryTests
     }
 
     [Fact]
+    public async Task UploadPackageAsync_PutsMultipartFormData_UnderThePackageFieldName()
+    {
+        string? sentBody = null;
+
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created);
+        });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesNuGetRepository repository = new(connection);
+
+        using MemoryStream content = new(FileBytes);
+        GitLabFileUpload upload = new() { Content = content, FileName = "mynugetpkg.1.3.0.17.nupkg" };
+
+        await repository.UploadPackageAsync(1, upload, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/1/packages/nuget",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("multipart/form-data", handler.LastRequest?.Content?.Headers.ContentType?.MediaType);
+        Assert.NotNull(sentBody);
+        Assert.Contains("name=package", sentBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=file", sentBody, StringComparison.Ordinal);
+
+        // The stream is borrowed, never owned: it must still be usable after the call returns.
+        Assert.True(content.CanRead);
+    }
+
+    [Fact]
+    public async Task UploadPackageV2Async_PutsMultipartFormData_UnderThePackageFieldName()
+    {
+        string? sentBody = null;
+
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created);
+        });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesNuGetRepository repository = new(connection);
+
+        using MemoryStream content = new(FileBytes);
+        GitLabFileUpload upload = new() { Content = content, FileName = "mynugetpkg.1.3.0.17.nupkg" };
+
+        await repository.UploadPackageV2Async(1, upload, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/1/packages/nuget/v2",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.NotNull(sentBody);
+        Assert.Contains("name=package", sentBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UploadSymbolPackageAsync_PutsMultipartFormData_UnderThePackageFieldName()
+    {
+        string? sentBody = null;
+
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created);
+        });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesNuGetRepository repository = new(connection);
+
+        using MemoryStream content = new(FileBytes);
+        GitLabFileUpload upload = new() { Content = content, FileName = "mynugetpkg.1.3.0.17.snupkg" };
+
+        await repository.UploadSymbolPackageAsync(1, upload, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/1/packages/nuget/symbolpackage",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.NotNull(sentBody);
+        Assert.Contains("name=package", sentBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task GetPackageVersionsAsync_DeserializesTheVersionList()
     {
         const string VersionsJson = """{"versions":["1.0.0","1.3.0.17"]}""";
@@ -529,6 +612,24 @@ public sealed class PackagesNuGetRepositoryTests
             await repository.EnumeratePackagesAsync(1, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal("https://gitlab.example/api/v4/projects/1/packages/nuget/v2/Packages()",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(HttpStatusCode.OK, file.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetV2PackageMetadataAsync_ComposesBothValuesIntoOneODataKeyPredicateSegment()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(FileBytes) });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesNuGetRepository repository = new(connection);
+
+        using GitLabFileResponse file = await repository.GetV2PackageMetadataAsync(1, "My.Pkg", "1.0.0",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/1/packages/nuget/v2/Packages(Id='My.Pkg',Version='1.0.0')",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal(HttpStatusCode.OK, file.StatusCode);
     }

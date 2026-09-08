@@ -661,4 +661,68 @@ public interface IGitLabClient
     ///     (<c>/internal/agents/agentw/...</c>).
     /// </summary>
     IWorkspacesClient Workspaces { get; }
+
+    /// <summary>
+    ///     Alert management metric images - screenshots and dashboard links attached to an alert
+    ///     (<c>/projects/:id/alert_management_alerts/:alert_iid/metric_images</c>).
+    /// </summary>
+    IAlertManagementClient AlertManagement { get; }
+
+    /// <summary>
+    ///     The ML Model Registry's file storage (<c>/projects/:id/packages/ml_models/...</c>) - uploading
+    ///     and downloading the files attached to a model version. Model and model-version metadata itself
+    ///     is managed through <see cref="MlModels" /> instead.
+    /// </summary>
+    IMlModelPackageFilesClient MlModelPackageFiles { get; }
+
+    /// <summary>A project's pull mirror configuration and status (<c>/projects/:id/mirror/pull</c>).</summary>
+    IProjectMirrorsClient ProjectMirrors { get; }
+
+    /// <summary>
+    ///     Project package protection rules (<c>/projects/:id/packages/protection/rules</c>) - which
+    ///     packages, by name pattern and package format, only members at or above a given role may push
+    ///     or delete.
+    /// </summary>
+    IProjectPackageProtectionRulesClient ProjectPackageProtectionRules { get; }
+
+    /// <summary>
+    ///     Project container repository protection rules
+    ///     (<c>/projects/:id/registry/protection/repository/rules</c>) - which container image
+    ///     repositories, by path pattern, only members at or above a given role may push images to or
+    ///     delete images from.
+    /// </summary>
+    IProjectContainerRegistryProtectionRulesClient ProjectContainerRegistryProtectionRules { get; }
+
+    /// <summary>
+    ///     Project container registry protection tag rules
+    ///     (<c>/projects/:id/registry/protection/tag/rules</c>) - which container image tags, by name
+    ///     pattern, only members at or above a given role may push or delete.
+    /// </summary>
+    IProjectContainerRegistryProtectionTagRulesClient ProjectContainerRegistryProtectionTagRules { get; }
+
+    /// <summary>
+    ///     CI/CD job token access settings for a project (<c>/projects/:id/job_token_scope</c>) - whether
+    ///     job tokens are restricted, and the project/group allowlists that restriction exempts.
+    /// </summary>
+    IJobTokenScopeClient JobTokenScope { get; }
+
+    /// <summary>
+    ///     Push rules (<c>/projects/:id/push_rule</c>, <c>/groups/:id/push_rule</c>) - server-side checks
+    ///     run against every push, and the group-level defaults applied to new projects.
+    /// </summary>
+    IPushRulesClient PushRules { get; }
+
+    /// <summary>
+    ///     The Terraform Module Registry (<c>/packages/terraform/modules/v1/...</c>,
+    ///     <c>/projects/:id/packages/terraform/modules/...</c>) - a different API area from
+    ///     <see cref="ITerraformStatesClient" />, which is the Terraform remote-state backend rather than a
+    ///     module registry.
+    /// </summary>
+    IPackagesTerraformModulesClient PackagesTerraformModules { get; }
+
+    /// <summary>
+    ///     Artifact attestations (<c>/projects/:id/attestations</c>) - build provenance bundles produced
+    ///     for a project's CI/CD pipelines, addressed by their project-scoped internal id (<c>iid</c>).
+    /// </summary>
+    IAttestationsClient Attestations { get; }
 }

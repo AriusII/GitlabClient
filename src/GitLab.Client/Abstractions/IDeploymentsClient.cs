@@ -10,6 +10,7 @@ public interface IDeploymentsClient
     IAsyncEnumerable<GitLabDeployment> ListAsync(ProjectId projectId, DeploymentListOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Gets one deployment by ID, including the extended-shape fields the list endpoint omits.</summary>
     Task<GitLabDeployment> GetAsync(ProjectId projectId, long deploymentId,
         CancellationToken cancellationToken = default);
 

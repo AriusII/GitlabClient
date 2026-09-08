@@ -24,12 +24,14 @@ public interface ISshKeysClient
     /// <summary>Lists the authenticated user's SSH keys, streaming every page.</summary>
     IAsyncEnumerable<GitLabSshKey> ListForCurrentUserAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves one of the authenticated user's SSH keys by its id.</summary>
     Task<GitLabSshKey> GetForCurrentUserAsync(long keyId, CancellationToken cancellationToken = default);
 
     /// <summary>Adds an SSH key to the authenticated user's account.</summary>
     Task<GitLabSshKey> CreateForCurrentUserAsync(CreateSshKeyRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Removes an SSH key from the authenticated user's account.</summary>
     Task DeleteForCurrentUserAsync(long keyId, CancellationToken cancellationToken = default);
 
     /// <summary>Lists another user's SSH keys, streaming every page. GitLab serves this without authentication.</summary>

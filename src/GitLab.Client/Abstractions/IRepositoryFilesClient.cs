@@ -6,15 +6,47 @@ namespace GitLab.Client.Abstractions;
 /// <summary>Wraps the GitLab "Repository files" API area (<c>/projects/:id/repository/files</c>).</summary>
 public interface IRepositoryFilesClient
 {
+    /// <summary>
+    ///     Reads a file's metadata and Base64-encoded content
+    ///     (<c>GET /projects/:id/repository/files/:file_path</c>). Use <see cref="GetRawAsync" /> to stream
+    ///     the raw bytes instead.
+    /// </summary>
+    /// <param name="projectId">The project that owns the file.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="refName">The branch, tag or commit SHA to read at.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task<GitLabRepositoryFile> GetAsync(ProjectId projectId, string filePath, string refName,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Creates a new file and commits it (<c>POST /projects/:id/repository/files/:file_path</c>).
+    /// </summary>
+    /// <param name="projectId">The project to create the file in.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="request">The branch, content and commit message for the new file.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task<GitLabRepositoryFile> CreateAsync(ProjectId projectId, string filePath, CreateRepositoryFileRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Replaces an existing file's content and commits the change
+    ///     (<c>PUT /projects/:id/repository/files/:file_path</c>).
+    /// </summary>
+    /// <param name="projectId">The project that owns the file.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="request">The branch, new content and commit message for the update.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task<GitLabRepositoryFile> UpdateAsync(ProjectId projectId, string filePath, UpdateRepositoryFileRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Deletes a file and commits the removal (<c>DELETE /projects/:id/repository/files/:file_path</c>).
+    /// </summary>
+    /// <param name="projectId">The project that owns the file.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="branch">The branch to commit the deletion to.</param>
+    /// <param name="commitMessage">The commit message.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task DeleteAsync(ProjectId projectId, string filePath, string branch, string commitMessage,
         CancellationToken cancellationToken = default);
 

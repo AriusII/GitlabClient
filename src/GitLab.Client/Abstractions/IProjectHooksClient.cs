@@ -63,4 +63,18 @@ public interface IProjectHooksClient
     /// <summary>Removes one custom header from the hook, leaving the others in place.</summary>
     Task DeleteCustomHeaderAsync(ProjectId projectId, long hookId, string key,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Sets one URL variable's value, leaving the others in place. GitLab answers <c>200</c> with no
+    ///     body and never echoes the value back.
+    /// </summary>
+    Task UpdateUrlVariableAsync(ProjectId projectId, long hookId, string key,
+        UpdateProjectHookUrlVariableRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Sets one custom header's value, leaving the others in place. GitLab answers <c>200</c> with no
+    ///     body and never echoes the value back.
+    /// </summary>
+    Task UpdateCustomHeaderAsync(ProjectId projectId, long hookId, string key,
+        UpdateProjectHookCustomHeaderRequest request, CancellationToken cancellationToken = default);
 }

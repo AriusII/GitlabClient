@@ -13,16 +13,6 @@ namespace GitLab.Client.Repositories;
 ///     <see cref="IGitLabApiConnection" />. Knows GitLab's wire format; nothing above this layer should
 ///     build a route or touch <see cref="IGitLabApiConnection" /> directly.
 /// </summary>
-/// <remarks>
-///     <c>GET /projects/:id/packages/pypi/forward/:package_name/:upstream_path</c> (proxying a package
-///     file from the upstream PyPI dependency-firewall target) is deliberately not wrapped here. Its
-///     success response is a bare <c>302 Found</c> redirect with no body, but
-///     <see cref="IGitLabApiConnection" />'s handler pipeline runs with <c>AllowAutoRedirect = false</c>
-///     and every transport method funnels non-2xx responses (a 3xx included) through the same
-///     "throw the typed exception" path - there is no method that would hand a caller the
-///     <c>Location</c> header instead of throwing. Wrapping it would need new transport surface, which is
-///     centrally owned and out of scope here.
-/// </remarks>
 [GenerateClientLayers(typeof(IPackagesPyPiService), typeof(IPackagesPyPiClient))]
 internal interface IPackagesPyPiRepository
 {
@@ -48,4 +38,7 @@ internal interface IPackagesPyPiRepository
 
     Task<GitLabFileResponse> GetSimplePackageForProjectAsync(ProjectId projectId, string packageName,
         CancellationToken cancellationToken = default);
+
+    Task<GitLabRedirectResponse> ForwardPackageFileAsync(ProjectId projectId, string packageName,
+        string upstreamPath, CancellationToken cancellationToken = default);
 }

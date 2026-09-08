@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
@@ -196,6 +195,51 @@ public sealed class IntegrationsRepositoryTests
 
         // The value kinds survive too - a bool stays a bool rather than becoming the string "True".
         Assert.Equal(JsonValueKind.True, properties.GetProperty("enable_ssl_verification").ValueKind);
+    }
+
+    [Fact]
+    public async Task GetForGroupAsync_EncodesTheNamespacedGroupPath_AndDeserializesTheIntegration()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(FullIntegrationJson, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        IntegrationsRepository repository = new(connection);
+
+        GitLabIntegration integration = await repository.GetForGroupAsync("parent-group/subgroup",
+            GitLabIntegrationSlug.Jenkins, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/parent-group%2Fsubgroup/integrations/jenkins",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(75, integration.Id);
+        Assert.NotNull(integration.Properties);
+    }
+
+    [Fact]
+    public async Task GetForGroupAsync_OnAnUnconfiguredIntegration_ThrowsGitLabNotFoundException()
+    {
+        const string Json = """{ "message": "404 Service Not Found" }""";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        IntegrationsRepository repository = new(connection);
+
+        GitLabNotFoundException exception = await Assert.ThrowsAsync<GitLabNotFoundException>(() =>
+            repository.GetForGroupAsync(9970, GitLabIntegrationSlug.Jira, TestContext.Current.CancellationToken));
+
+        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+        Assert.Equal("https://gitlab.example/api/v4/groups/9970/integrations/jira",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
     [Fact]
@@ -496,23 +540,3 @@ public sealed class IntegrationsRepositoryTests
         Assert.Equal("""{"token":"s3cr3t"}""", sentBody);
     }
 }
-
-/// <summary>
-///     Stands in for the typed settings record an external caller (or a later wave of per-slug setters)
-///     would bring to <c>SetAsync&lt;TSettings&gt;</c>. Deliberately declared in the test assembly with
-///     its own context: the point of the generic overload is that the settings type does not have to be
-///     one the library knows about.
-/// </summary>
-internal sealed record TestSlackSettings
-{
-    public required Uri Webhook { get; init; }
-
-    public bool? NotifyOnlyBrokenPipelines { get; init; }
-}
-
-[JsonSourceGenerationOptions(
-    PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-[JsonSerializable(typeof(TestSlackSettings))]
-[JsonSerializable(typeof(string))]
-internal sealed partial class GitLabTestJsonContext : JsonSerializerContext;

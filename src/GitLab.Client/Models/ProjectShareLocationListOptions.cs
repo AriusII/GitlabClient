@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     The endpoint declares no pagination parameters of its own.
 /// </summary>
 [GitLabQuery]
-public sealed record ProjectShareLocationListOptions
+public readonly record struct ProjectShareLocationListOptions
 {
     /// <summary>Return only groups matching this search term.</summary>
     public string? Search { get; init; }

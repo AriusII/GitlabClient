@@ -113,6 +113,9 @@ public sealed record IssueListOptions
     /// </summary>
     public string? Weight { get; init; }
 
+    /// <summary>Only issues associated with this epic.</summary>
+    public long? EpicId { get; init; }
+
     public GitLabIssueHealthStatus? HealthStatus { get; init; }
 
     /// <summary>An iteration id, or the strings <c>None</c>, <c>Any</c> and <c>Current</c>.</summary>

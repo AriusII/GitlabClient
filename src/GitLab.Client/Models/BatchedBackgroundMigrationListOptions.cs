@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /admin/batched_background_migrations</c>.</summary>
 [GitLabQuery]
-public sealed record BatchedBackgroundMigrationListOptions
+public readonly record struct BatchedBackgroundMigrationListOptions
 {
     /// <summary>The database to list migrations for. GitLab defaults to <c>main</c>.</summary>
     public GitLabBackgroundJobDatabase? Database { get; init; }

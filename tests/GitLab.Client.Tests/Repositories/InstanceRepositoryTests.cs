@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 
+using GitLab.Client.Abstractions;
 using GitLab.Client.Domain;
 using GitLab.Client.Infrastructure.Http;
 using GitLab.Client.Models;
@@ -41,6 +42,96 @@ public sealed class InstanceRepositoryTests
         Assert.Equal("GitLab", appearance.Title);
         Assert.True(appearance.EmailHeaderAndFooterEnabled);
         Assert.Equal("/uploads/-/system/appearance/logo/1/logo.png", appearance.Logo?.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateAppearanceAsync_PutsOnlyTheChangedFields_AsJson()
+    {
+        const string ResponseJson = """{ "title": "GitLab Test Instance", "site_name": "My GitLab" }""";
+
+        string? sentBody = null;
+        string? contentType = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            contentType = request.Content?.Headers.ContentType?.MediaType;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(ResponseJson, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        InstanceRepository repository = new(connection);
+
+        UpdateApplicationAppearanceRequest request = new()
+        {
+            Title = "GitLab Test Instance", EmailHeaderAndFooterEnabled = true
+        };
+
+        GitLabAppearance appearance =
+            await repository.UpdateAppearanceAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/application/appearance",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("application/json", contentType);
+        Assert.Equal("""{"title":"GitLab Test Instance","email_header_and_footer_enabled":true}""", sentBody);
+        Assert.Equal("GitLab Test Instance", appearance.Title);
+        Assert.Equal("My GitLab", appearance.SiteName);
+    }
+
+    [Theory]
+    [InlineData("logo")]
+    [InlineData("header_logo")]
+    [InlineData("pwa_icon")]
+    [InlineData("favicon")]
+    public async Task SetAppearanceImageAsync_PutsMultipart_UnderTheFieldNameGitLabExpects(string fieldName)
+    {
+        const string ResponseJson = """{ "title": "GitLab" }""";
+
+        string? sentBody = null;
+        string? contentType = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            contentType = request.Content?.Headers.ContentType?.MediaType;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(ResponseJson, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        InstanceRepository repository = new(connection);
+
+        using MemoryStream content = new("PNG-BYTES"u8.ToArray());
+
+        // FieldName is left at its "file" default on purpose: the repository must override it, because
+        // GitLab answers 200 and silently ignores an image part sent under any other name.
+        GitLabFileUpload upload = new() { Content = content, FileName = "image.png", ContentType = "image/png" };
+
+        GitLabAppearance appearance = fieldName switch
+        {
+            "logo" => await repository.SetAppearanceLogoAsync(upload, TestContext.Current.CancellationToken),
+            "header_logo" => await repository.SetAppearanceHeaderLogoAsync(upload,
+                TestContext.Current.CancellationToken),
+            "pwa_icon" => await repository.SetAppearancePwaIconAsync(upload, TestContext.Current.CancellationToken),
+            "favicon" => await repository.SetAppearanceFaviconAsync(upload, TestContext.Current.CancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(fieldName), fieldName, "Unknown field name.")
+        };
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/application/appearance",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("multipart/form-data", contentType);
+        string body = (sentBody ?? string.Empty).Replace("\"", string.Empty, StringComparison.Ordinal);
+        Assert.Contains($"name={fieldName}", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("name=file;", body, StringComparison.Ordinal);
+        Assert.Contains("filename=image.png", body, StringComparison.Ordinal);
+        Assert.Equal("GitLab", appearance.Title);
     }
 
     [Fact]

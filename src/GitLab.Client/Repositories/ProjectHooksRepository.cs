@@ -101,4 +101,28 @@ internal sealed class ProjectHooksRepository(IGitLabApiConnection connection) : 
                 .Literal("custom_headers").Escaped(key).Build(),
             cancellationToken);
     }
+
+    public Task UpdateUrlVariableAsync(ProjectId projectId, long hookId, string key,
+        UpdateProjectHookUrlVariableRequest request, CancellationToken cancellationToken = default)
+    {
+        // 200 with no body: the value being set is secret-adjacent, and GitLab never echoes it back.
+        return connection.PutAsync(
+            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal("hooks").Segment(hookId)
+                .Literal("url_variables").Escaped(key).Build(),
+            request,
+            GitLabJsonContext.Default.UpdateProjectHookUrlVariableRequest,
+            cancellationToken);
+    }
+
+    public Task UpdateCustomHeaderAsync(ProjectId projectId, long hookId, string key,
+        UpdateProjectHookCustomHeaderRequest request, CancellationToken cancellationToken = default)
+    {
+        // 200 with no body: the value being set is secret-adjacent, and GitLab never echoes it back.
+        return connection.PutAsync(
+            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal("hooks").Segment(hookId)
+                .Literal("custom_headers").Escaped(key).Build(),
+            request,
+            GitLabJsonContext.Default.UpdateProjectHookCustomHeaderRequest,
+            cancellationToken);
+    }
 }

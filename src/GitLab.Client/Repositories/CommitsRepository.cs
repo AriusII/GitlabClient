@@ -8,10 +8,13 @@ namespace GitLab.Client.Repositories;
 
 internal sealed class CommitsRepository(IGitLabApiConnection connection) : ICommitsRepository
 {
-    public Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, CancellationToken cancellationToken = default)
+    public Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, bool? stats = null,
+        CancellationToken cancellationToken = default)
     {
         return connection.GetAsync(
-            CommitRoute(projectId, sha).Build(),
+            CommitRoute(projectId, sha)
+                .Query("stats", stats)
+                .Build(),
             GitLabJsonContext.Default.GitLabCommit,
             cancellationToken);
     }

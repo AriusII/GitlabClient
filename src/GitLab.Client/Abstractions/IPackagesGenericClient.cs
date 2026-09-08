@@ -39,6 +39,13 @@ public interface IPackagesGenericClient
     Task AuthorizeMavenPackageFileUploadAsync(ProjectId projectId, string path, string fileName,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Uploads a Maven package file. GitLab's Workhorse layer answers with no body, so there is nothing to
+    ///     deserialize back.
+    /// </summary>
+    Task UploadMavenPackageFileAsync(ProjectId projectId, string path, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Downloads a generic package file.</summary>
     Task<GitLabFileResponse> DownloadGenericPackageFileAsync(ProjectId projectId, string packageName,
         string packageVersion, string fileName, CancellationToken cancellationToken = default);

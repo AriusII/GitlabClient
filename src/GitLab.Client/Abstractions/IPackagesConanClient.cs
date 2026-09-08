@@ -33,7 +33,7 @@ namespace GitLab.Client.Abstractions;
 ///         text a caller supplies and is percent-encoded by this client - pass the raw value.
 ///     </para>
 /// </summary>
-public interface IPackagesConanClient
+public partial interface IPackagesConanClient
 {
     // ----- Recipes & packages (v1) -----
 
@@ -167,8 +167,7 @@ public interface IPackagesConanClient
 
     /// <summary>
     ///     The Workhorse pre-upload authorization check for a recipe file - Conan (and this client) must
-    ///     call this before <c>PUT</c>-ing the file itself. There is currently no way to express the upload
-    ///     itself through this client; see the resource's implementation notes.
+    ///     call this before <see cref="UploadRecipeFileAsync" />, which uploads the file itself.
     /// </summary>
     Task AuthorizeRecipeFileUploadAsync(string packageName, string packageVersion, string packageUsername,
         string packageChannel, string recipeRevision, string fileName,
@@ -299,6 +298,16 @@ public interface IPackagesConanClient
     Task AuthorizePackageRevisionFileUploadAsync(ProjectId projectId, string packageName, string packageVersion,
         string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
         string packageRevision, string fileName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Uploads one package binary file to a specific package revision. Call
+    ///     <see cref="AuthorizePackageRevisionFileUploadAsync" /> first, as Conan (and GitLab's own
+    ///     documentation) requires. GitLab's Workhorse layer answers with an empty body on success.
+    /// </summary>
+    Task UploadPackageRevisionFileAsync(ProjectId projectId, string packageName, string packageVersion,
+        string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
+        string packageRevision, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Gets the metadata for every package reference built from a recipe, pinned to one recipe revision.

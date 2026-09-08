@@ -46,9 +46,8 @@ internal interface IEnvironmentsRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     <c>DELETE /projects/:id/environments/review_apps</c>. GitLab answers with the environments it
-    ///     scheduled, but the transport has no <c>DELETE</c> overload that reads a response body, so the
-    ///     report is not surfaced.
+    ///     <c>DELETE /projects/:id/environments/review_apps</c>. GitLab answers with the entries it
+    ///     scheduled, but this method discards that body rather than surfacing it as a typed result.
     /// </summary>
     Task DeleteReviewAppsAsync(ProjectId projectId, ReviewAppDeletionOptions? options = null,
         CancellationToken cancellationToken = default);

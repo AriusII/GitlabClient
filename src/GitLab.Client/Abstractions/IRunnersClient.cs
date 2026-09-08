@@ -42,6 +42,10 @@ public interface IRunnersClient
     Task<GitLabRunner> GetAsync(long runnerId, bool? includeProjects = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Updates a runner's configuration - description, pause state, tags, and similar settings. Omitted
+    ///     members keep their current server-side value.
+    /// </summary>
     Task<GitLabRunner> UpdateAsync(long runnerId, UpdateRunnerRequest request,
         CancellationToken cancellationToken = default);
 

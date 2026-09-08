@@ -254,6 +254,154 @@ public sealed class SearchRepositoryTests
     }
 
     [Fact]
+    public async Task SearchGroupMilestonesAsync_HitsTheGroupRoute_WithTheMilestonesScope()
+    {
+        const string Json = """
+                            [
+                              {
+                                "id": 88,
+                                "iid": 3,
+                                "group_id": 9,
+                                "title": "1.0",
+                                "state": "active",
+                                "due_date": "2024-06-30",
+                                "expired": false,
+                                "web_url": "https://gitlab.example/groups/gitlab-org/-/milestones/3"
+                              }
+                            ]
+                            """;
+
+        using StubHttpMessageHandler handler = RespondWith(Json);
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SearchRepository repository = new(connection);
+
+        List<GitLabMilestone> milestones = await CollectAsync(
+            repository.SearchGroupMilestonesAsync(9, "1.0", null, TestContext.Current.CancellationToken));
+
+        Assert.Equal("https://gitlab.example/api/v4/groups/9/search?search=1.0&scope=milestones",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(3, Assert.Single(milestones).Iid);
+    }
+
+    [Fact]
+    public async Task SearchGroupNotesAsync_HitsTheGroupRoute_WithTheNotesScope()
+    {
+        const string Json = """
+                            [
+                              {
+                                "id": 302,
+                                "body": "Looks good to me",
+                                "system": false,
+                                "resolvable": true
+                              }
+                            ]
+                            """;
+
+        using StubHttpMessageHandler handler = RespondWith(Json);
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SearchRepository repository = new(connection);
+
+        List<GitLabNote> notes = await CollectAsync(
+            repository.SearchGroupNotesAsync(9, "looks good", null, TestContext.Current.CancellationToken));
+
+        Assert.Equal("https://gitlab.example/api/v4/groups/9/search?search=looks%20good&scope=notes",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("Looks good to me", Assert.Single(notes).Body);
+    }
+
+    [Fact]
+    public async Task SearchGroupCommitsAsync_EncodesNamespacedGroupPath_WithTheCommitsScope()
+    {
+        const string Json = """
+                            [
+                              {
+                                "id": "12d65c8dd2b2676fa3ac47d955accc085a37a9c1",
+                                "short_id": "12d65c8d",
+                                "title": "Speed up the login page",
+                                "author_name": "Ada Lovelace",
+                                "web_url": "https://gitlab.example/gitlab-org/subgroup/-/commit/12d65c8dd2b2676fa3ac47d955accc085a37a9c1"
+                              }
+                            ]
+                            """;
+
+        using StubHttpMessageHandler handler = RespondWith(Json);
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SearchRepository repository = new(connection);
+
+        List<GitLabCommit> commits = await CollectAsync(repository.SearchGroupCommitsAsync("gitlab-org/subgroup",
+            "login", null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/gitlab-org%2Fsubgroup/search?search=login&scope=commits",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("12d65c8d", Assert.Single(commits).ShortId);
+    }
+
+    [Fact]
+    public async Task SearchGroupUsersAsync_HitsTheGroupRoute_WithTheUsersScope()
+    {
+        const string Json = """
+                            [
+                              {
+                                "id": 3,
+                                "username": "ada",
+                                "name": "Ada Lovelace",
+                                "state": "active",
+                                "web_url": "https://gitlab.example/ada"
+                              }
+                            ]
+                            """;
+
+        using StubHttpMessageHandler handler = RespondWith(Json);
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SearchRepository repository = new(connection);
+
+        List<GitLabUser> users =
+            await CollectAsync(repository.SearchGroupUsersAsync(9, "ada", null, TestContext.Current.CancellationToken));
+
+        Assert.Equal("https://gitlab.example/api/v4/groups/9/search?search=ada&scope=users",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("ada", Assert.Single(users).Username);
+    }
+
+    [Fact]
+    public async Task SearchProjectUsersAsync_HitsTheProjectRoute_WithTheUsersScope()
+    {
+        const string Json = """
+                            [
+                              {
+                                "id": 3,
+                                "username": "ada",
+                                "name": "Ada Lovelace",
+                                "state": "active",
+                                "web_url": "https://gitlab.example/ada"
+                              }
+                            ]
+                            """;
+
+        using StubHttpMessageHandler handler = RespondWith(Json);
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SearchRepository repository = new(connection);
+
+        List<GitLabUser> users = await CollectAsync(
+            repository.SearchProjectUsersAsync(7, "ada", null, TestContext.Current.CancellationToken));
+
+        Assert.Equal("https://gitlab.example/api/v4/projects/7/search?search=ada&scope=users",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("ada", Assert.Single(users).Username);
+    }
+
+    [Fact]
     public async Task SearchProjectIssuesAsync_EncodesNamespacedProjectPath_AndSendsTheRefFilter()
     {
         using StubHttpMessageHandler handler = RespondWith(IssuesJson);
@@ -421,6 +569,7 @@ public sealed class SearchRepositoryTests
         {
             Type = ["issue", "epic"],
             IncludeArchived = true,
+            ExcludeForks = true,
             NumContextLines = 5,
             Regex = true,
             Page = 2
@@ -431,7 +580,7 @@ public sealed class SearchRepositoryTests
 
         Assert.Equal(
             "https://gitlab.example/api/v4/groups/9/search?search=login&scope=issues"
-            + "&type=issue,epic&include_archived=true&num_context_lines=5&regex=true&page=2",
+            + "&type=issue,epic&include_archived=true&exclude_forks=true&num_context_lines=5&regex=true&page=2",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Single(issues);
     }

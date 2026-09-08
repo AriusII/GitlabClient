@@ -54,6 +54,13 @@ public interface IPackagesNuGetClient
     /// </summary>
     Task AuthorizePackageUploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Uploads a NuGet v3 package (<c>.nupkg</c>) to <c>PUT /projects/:id/packages/nuget</c>. Call
+    ///     <see cref="AuthorizePackageUploadAsync" /> first, as GitLab's Workhorse upload protocol requires.
+    /// </summary>
+    Task UploadPackageAsync(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default);
+
     /// <summary>The NuGet Content Service index - every published version of one package.</summary>
     Task<GitLabNugetPackagesVersions> GetPackageVersionsAsync(ProjectId projectId, string packageName,
         CancellationToken cancellationToken = default);
@@ -88,6 +95,14 @@ public interface IPackagesNuGetClient
     /// </summary>
     Task AuthorizeSymbolPackageUploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Uploads a NuGet symbol package (<c>.snupkg</c>) to <c>PUT /projects/:id/packages/nuget/symbolpackage</c>.
+    ///     Call <see cref="AuthorizeSymbolPackageUploadAsync" /> first, as GitLab's Workhorse upload protocol
+    ///     requires.
+    /// </summary>
+    Task UploadSymbolPackageAsync(ProjectId projectId, GitLabFileUpload symbolPackage,
+        CancellationToken cancellationToken = default);
+
     /// <summary>The NuGet V2 Feed Service Index for a project.</summary>
     Task<GitLabFileResponse> GetV2ServiceIndexAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
@@ -101,6 +116,13 @@ public interface IPackagesNuGetClient
     /// </summary>
     Task AuthorizePackageV2UploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Uploads a NuGet v2 package (<c>.nupkg</c>) to <c>PUT /projects/:id/packages/nuget/v2</c>. Call
+    ///     <see cref="AuthorizePackageV2UploadAsync" /> first, as GitLab's Workhorse upload protocol requires.
+    /// </summary>
+    Task UploadPackageV2Async(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Deletes every version-matching package file for a NuGet package name and version.</summary>
     Task DeletePackageAsync(ProjectId projectId, string packageName, string packageVersion,
         CancellationToken cancellationToken = default);
@@ -112,4 +134,12 @@ public interface IPackagesNuGetClient
     /// <summary>The NuGet V2 Feed <c>Packages()</c> endpoint - enumerates packages, optionally OData-filtered.</summary>
     Task<GitLabFileResponse> EnumeratePackagesAsync(ProjectId projectId, string? filter = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     The NuGet V2 Feed Single Package Metadata endpoint -
+    ///     <c>Packages(Id=':package_name',Version=':package_version')</c>, an OData key predicate packed
+    ///     into one path segment rather than two chained ones.
+    /// </summary>
+    Task<GitLabFileResponse> GetV2PackageMetadataAsync(ProjectId projectId, string packageName,
+        string packageVersion, CancellationToken cancellationToken = default);
 }

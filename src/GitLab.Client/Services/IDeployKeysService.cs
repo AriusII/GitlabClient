@@ -29,4 +29,7 @@ internal interface IDeployKeysService
         CancellationToken cancellationToken = default);
 
     Task<GitLabDeployKey> CreateAsync(CreateDeployKeyRequest request, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabDeployKey> ListForUserAsync(long userId,
+        UserProjectDeployKeyListOptions? options = null, CancellationToken cancellationToken = default);
 }

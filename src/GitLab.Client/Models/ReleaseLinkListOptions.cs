@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     endpoint beyond the page size.
 /// </summary>
 [GitLabQuery]
-public sealed record ReleaseLinkListOptions
+public readonly record struct ReleaseLinkListOptions
 {
     public int? PerPage { get; init; }
 }

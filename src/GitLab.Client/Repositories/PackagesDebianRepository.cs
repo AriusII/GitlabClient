@@ -6,7 +6,7 @@ using GitLab.Client.Models;
 
 namespace GitLab.Client.Repositories;
 
-internal sealed class PackagesDebianRepository(IGitLabApiConnection connection) : IPackagesDebianRepository
+internal sealed partial class PackagesDebianRepository(IGitLabApiConnection connection) : IPackagesDebianRepository
 {
     // ---- Distributions (project scope) ----
 

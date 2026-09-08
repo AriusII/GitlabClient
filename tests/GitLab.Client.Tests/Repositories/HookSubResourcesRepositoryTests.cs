@@ -246,6 +246,71 @@ public sealed class HookSubResourcesRepositoryTests
     }
 
     [Fact]
+    public async Task UpdateUrlVariableAsync_PutsTheValue_WithNoResponseBodyExpected_OnEveryHookSurface()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+
+        await new ProjectHooksRepository(connection).UpdateUrlVariableAsync(42, 7, "token/1",
+            new UpdateProjectHookUrlVariableRequest { Value = "s3cr3t" }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/42/hooks/7/url_variables/token%2F1",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        await new GroupHooksRepository(connection).UpdateUrlVariableAsync(9, 4, "token/1",
+            new UpdateGroupHookUrlVariableRequest { Value = "s3cr3t" }, TestContext.Current.CancellationToken);
+        Assert.Equal("https://gitlab.example/api/v4/groups/9/hooks/4/url_variables/token%2F1",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task UpdateCustomHeaderAsync_PutsTheValue_WithNoResponseBodyExpected_OnEveryHookSurface()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+
+        await new ProjectHooksRepository(connection).UpdateCustomHeaderAsync(42, 7, "X-Team Header",
+            new UpdateProjectHookCustomHeaderRequest { Value = "secret-value" },
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/42/hooks/7/custom_headers/X-Team%20Header",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        await new GroupHooksRepository(connection).UpdateCustomHeaderAsync("gitlab-org/subgroup", 4, "X-Team Header",
+            new UpdateGroupHookCustomHeaderRequest { Value = "secret-value" },
+            TestContext.Current.CancellationToken);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/gitlab-org%2Fsubgroup/hooks/4/custom_headers/X-Team%20Header",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public void UpdateGroupHookCustomHeaderRequest_ToString_RedactsTheValue()
+    {
+        UpdateGroupHookCustomHeaderRequest request = new() { Value = "super-secret" };
+
+        string rendered = request.ToString();
+
+        Assert.DoesNotContain("super-secret", rendered, StringComparison.Ordinal);
+        Assert.Contains("redacted", rendered, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UpdateProjectHookUrlVariableRequest_ToString_RedactsTheValue()
+    {
+        UpdateProjectHookUrlVariableRequest request = new() { Value = "super-secret" };
+
+        string rendered = request.ToString();
+
+        Assert.DoesNotContain("super-secret", rendered, StringComparison.Ordinal);
+        Assert.Contains("redacted", rendered, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HookEventRequestData_StaysRawJson_SoAnyTriggerPayloadRoundTrips()
     {
         using JsonDocument document = JsonDocument.Parse("""{ "object_kind": "merge_request" }""");

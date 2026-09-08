@@ -6,28 +6,6 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace GitLab.Client.Tests.Generators;
 
 /// <summary>
-///     What one generator run produced: the merged compilation, the generator's own
-///     diagnostics, and every generated file keyed by hint name.
-/// </summary>
-internal sealed record GeneratorHarnessResult(
-    Compilation Compilation,
-    ImmutableArray<Diagnostic> GeneratorDiagnostics,
-    IReadOnlyDictionary<string, string> GeneratedSources)
-{
-    public ImmutableArray<Diagnostic> CompilationErrors =>
-        Compilation.GetDiagnostics()
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .ToImmutableArray();
-
-    public string Source(string hintName)
-    {
-        Assert.True(GeneratedSources.ContainsKey(hintName),
-            $"No generated source named '{hintName}'. Produced: {string.Join(", ", GeneratedSources.Keys)}");
-        return GeneratedSources[hintName];
-    }
-}
-
-/// <summary>
 ///     Compiles inline sources against the test host's own reference set and runs any combination of the
 ///     two generators over them. This is the only way to observe what a generator does when its input is
 ///     wrong: a broken generator makes the whole test project fail to build, so nothing that fails at

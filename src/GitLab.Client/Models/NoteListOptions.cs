@@ -24,4 +24,7 @@ public sealed record NoteListOptions
     public string? ActivityFilter { get; init; }
 
     public int? PerPage { get; init; }
+
+    /// <summary>Which page of results to return (1-based).</summary>
+    public int? Page { get; init; }
 }

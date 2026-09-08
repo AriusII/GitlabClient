@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     the shape of the result, so each search method hard-codes its own and the caller never supplies it.
 /// </summary>
 [GitLabQuery]
-public sealed record SearchListOptions
+public readonly record struct SearchListOptions
 {
     /// <summary>"all", "opened", "closed" or "merged". Only meaningful for issue and merge-request searches.</summary>
     public string? State { get; init; }

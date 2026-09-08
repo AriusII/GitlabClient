@@ -320,7 +320,13 @@ public sealed class DeployKeysRepositoryTests
                             "id": 1,
                             "title": "Instance key",
                             "key": "{{PublicKey}}",
-                            "usage_type": "auth"
+                            "usage_type": "auth",
+                            "projects_with_write_access": {
+                              "id": 7,
+                              "name": "shop",
+                              "path": "shop",
+                              "path_with_namespace": "acme/shop"
+                            }
                           }
                         ]
                         """;
@@ -350,6 +356,10 @@ public sealed class DeployKeysRepositoryTests
 
         // The instance-wide shape has no can_push at all.
         Assert.Null(only.CanPush);
+
+        // The plain APIEntitiesDeployKey shape carries project access - not just on the create response.
+        Assert.Equal(7, only.ProjectsWithWriteAccess?.Id);
+        Assert.Equal("acme/shop", only.ProjectsWithWriteAccess?.PathWithNamespace);
     }
 
     [Fact]
@@ -479,5 +489,68 @@ public sealed class DeployKeysRepositoryTests
                 TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListForUserAsync_BuildsUserProjectDeployKeysRoute_WithPaging_AndDeserializesEachKey()
+    {
+        string json = $$"""
+                        [
+                          {
+                            "id": 30,
+                            "title": "Personal laptop",
+                            "key": "{{PublicKey}}",
+                            "can_push": true
+                          }
+                        ]
+                        """;
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri(BaseAddress) };
+        GitLabApiConnection connection = new(httpClient);
+        DeployKeysRepository repository = new(connection);
+
+        List<GitLabDeployKey> keys = new();
+        await foreach (GitLabDeployKey key in repository.ListForUserAsync(7,
+                           new UserProjectDeployKeyListOptions { Page = 2, PerPage = 50 },
+                           TestContext.Current.CancellationToken))
+        {
+            keys.Add(key);
+        }
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/users/7/project_deploy_keys?page=2&per_page=50",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        GitLabDeployKey only = Assert.Single(keys);
+        Assert.Equal(30, only.Id);
+        Assert.Equal("Personal laptop", only.Title);
+        Assert.True(only.CanPush);
+    }
+
+    [Fact]
+    public async Task ListForUserAsync_OmitsQueryString_WhenOptionsAreNotSet()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("[]", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri(BaseAddress) };
+        GitLabApiConnection connection = new(httpClient);
+        DeployKeysRepository repository = new(connection);
+
+        await foreach (GitLabDeployKey _ in repository.ListForUserAsync(7,
+                           cancellationToken: TestContext.Current.CancellationToken))
+        {
+            Assert.Fail("The stub returns an empty page.");
+        }
+
+        Assert.Equal("https://gitlab.example/api/v4/users/7/project_deploy_keys",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 }

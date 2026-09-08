@@ -14,9 +14,24 @@ public sealed record PipelineListOptions
 
     public string? Source { get; init; }
 
+    /// <summary>Filters to pipelines whose name matches exactly.</summary>
+    public string? Name { get; init; }
+
+    /// <summary>The username of the user who triggered the pipeline.</summary>
+    public string? Username { get; init; }
+
+    /// <summary>"running", "pending", "finished", "branches" or "tags".</summary>
+    public string? Scope { get; init; }
+
     public DateTimeOffset? UpdatedAfter { get; init; }
 
     public DateTimeOffset? UpdatedBefore { get; init; }
+
+    /// <summary>Returns only pipelines created strictly after this instant.</summary>
+    public DateTimeOffset? CreatedAfter { get; init; }
+
+    /// <summary>Returns only pipelines created strictly before this instant.</summary>
+    public DateTimeOffset? CreatedBefore { get; init; }
 
     public bool? YamlErrors { get; init; }
 

@@ -56,6 +56,22 @@ public interface ISearchClient
     IAsyncEnumerable<GitLabMergeRequest> SearchGroupMergeRequestsAsync(GroupId groupId, string search,
         SearchListOptions? options = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Milestone search within one group (<c>GET /groups/:id/search?scope=milestones</c>).</summary>
+    IAsyncEnumerable<GitLabMilestone> SearchGroupMilestonesAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Note (comment) search within one group (<c>GET /groups/:id/search?scope=notes</c>).</summary>
+    IAsyncEnumerable<GitLabNote> SearchGroupNotesAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Commit-message search within one group (<c>GET /groups/:id/search?scope=commits</c>).</summary>
+    IAsyncEnumerable<GitLabCommit> SearchGroupCommitsAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>User search within one group (<c>GET /groups/:id/search?scope=users</c>).</summary>
+    IAsyncEnumerable<GitLabUser> SearchGroupUsersAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
     /// <summary>Issue search within one project (<c>GET /projects/:id/search?scope=issues</c>).</summary>
     IAsyncEnumerable<GitLabIssue> SearchProjectIssuesAsync(ProjectId projectId, string search,
         ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
@@ -74,6 +90,10 @@ public interface ISearchClient
 
     /// <summary>Milestone search within one project (<c>GET /projects/:id/search?scope=milestones</c>).</summary>
     IAsyncEnumerable<GitLabMilestone> SearchProjectMilestonesAsync(ProjectId projectId, string search,
+        ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>User search within one project (<c>GET /projects/:id/search?scope=users</c>).</summary>
+    IAsyncEnumerable<GitLabUser> SearchProjectUsersAsync(ProjectId projectId, string search,
         ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>

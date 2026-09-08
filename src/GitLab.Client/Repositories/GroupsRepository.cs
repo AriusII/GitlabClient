@@ -306,6 +306,13 @@ internal sealed class GroupsRepository(IGitLabApiConnection connection) : IGroup
             cancellationToken);
     }
 
+    public Task AuthorizeUploadAsync(GroupId groupId, CancellationToken cancellationToken = default)
+    {
+        return connection.PostAsync(
+            GitLabRouteBuilder.Create("groups").Segment(groupId).Literal("uploads").Literal("authorize").Build(),
+            cancellationToken);
+    }
+
     public Task<GitLabFileResponse> DownloadUploadAsync(GroupId groupId, long uploadId,
         CancellationToken cancellationToken = default)
     {

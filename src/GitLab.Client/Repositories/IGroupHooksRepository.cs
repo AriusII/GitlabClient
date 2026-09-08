@@ -41,4 +41,10 @@ internal interface IGroupHooksRepository
 
     Task DeleteCustomHeaderAsync(GroupId groupId, long hookId, string key,
         CancellationToken cancellationToken = default);
+
+    Task UpdateUrlVariableAsync(GroupId groupId, long hookId, string key, UpdateGroupHookUrlVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task UpdateCustomHeaderAsync(GroupId groupId, long hookId, string key, UpdateGroupHookCustomHeaderRequest request,
+        CancellationToken cancellationToken = default);
 }

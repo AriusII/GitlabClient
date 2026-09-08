@@ -12,6 +12,23 @@ namespace GitLab.Client.Repositories;
 ///     group scope. Builds routes via <see cref="Infrastructure.Routing.GitLabRouteBuilder" /> and calls
 ///     <see cref="IGitLabApiConnection" />; nothing above this layer should build a route or touch
 ///     <see cref="IGitLabApiConnection" /> directly.
+///     <para>
+///         <c>GET .../v2/Packages(Id='{package_name}',Version='{package_version}')</c> (the V2 OData
+///         single-package-metadata endpoint, see <see cref="GetV2PackageMetadataAsync" />) packs two
+///         caller-supplied, individually-escaped values into one literal-templated path segment via
+///         <see cref="Infrastructure.Routing.GitLabRouteBuilder.EscapedTemplate" /> - <c>Literal</c> and
+///         <c>Escaped</c> each unconditionally start a new <c>/</c>-delimited segment, so neither could
+///         express this route on their own.
+///     </para>
+///     <para>
+///         The three actual package-upload <c>PUT</c> endpoints (<see cref="UploadPackageAsync" />,
+///         <see cref="UploadPackageV2Async" />, <see cref="UploadSymbolPackageAsync" />) are each a
+///         <c>multipart/form-data</c> <c>PUT</c> that GitLab answers with an empty <c>201</c> body, wired
+///         through
+///         <see
+///             cref="IGitLabApiConnection.PutFileAsync(Uri, GitLabFileUpload, IReadOnlyDictionary{string, string}, CancellationToken)" />
+///         - the no-content sibling of the generic, response-deserializing overload.
+///     </para>
 /// </summary>
 [GenerateClientLayers(typeof(IPackagesNuGetService), typeof(IPackagesNuGetClient))]
 internal interface IPackagesNuGetRepository
@@ -43,6 +60,9 @@ internal interface IPackagesNuGetRepository
 
     Task AuthorizePackageUploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    Task UploadPackageAsync(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabNugetPackagesVersions> GetPackageVersionsAsync(ProjectId projectId, string packageName,
         CancellationToken cancellationToken = default);
 
@@ -66,12 +86,18 @@ internal interface IPackagesNuGetRepository
 
     Task AuthorizeSymbolPackageUploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    Task UploadSymbolPackageAsync(ProjectId projectId, GitLabFileUpload symbolPackage,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabFileResponse> GetV2ServiceIndexAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
 
     Task<GitLabFileResponse> GetV2MetadataAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
     Task AuthorizePackageV2UploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    Task UploadPackageV2Async(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default);
 
     Task DeletePackageAsync(ProjectId projectId, string packageName, string packageVersion,
         CancellationToken cancellationToken = default);
@@ -81,4 +107,7 @@ internal interface IPackagesNuGetRepository
 
     Task<GitLabFileResponse> EnumeratePackagesAsync(ProjectId projectId, string? filter = null,
         CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> GetV2PackageMetadataAsync(ProjectId projectId, string packageName,
+        string packageVersion, CancellationToken cancellationToken = default);
 }

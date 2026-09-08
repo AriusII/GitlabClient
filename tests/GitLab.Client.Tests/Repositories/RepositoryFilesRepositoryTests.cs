@@ -26,7 +26,8 @@ public sealed class RepositoryFilesRepositoryTests
                               "ref": "main",
                               "blob_id": "79f10e5f6c1e4e9b1a2f5b1c3d4e5f6a7b8c9d0e",
                               "commit_id": "d5a3b1c2e4f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
-                              "last_commit_id": "3b6c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c"
+                              "last_commit_id": "3b6c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c",
+                              "execute_filemode": true
                             }
                             """;
 
@@ -51,10 +52,12 @@ public sealed class RepositoryFilesRepositoryTests
         Assert.Equal(1476, file.Size);
         Assert.Equal("base64", file.Encoding);
         Assert.Equal("IyBSZWFkbWU=", file.Content);
+        Assert.Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", file.ContentSha256);
         Assert.Equal("main", file.Ref);
         Assert.Equal("79f10e5f6c1e4e9b1a2f5b1c3d4e5f6a7b8c9d0e", file.BlobId);
         Assert.Equal("d5a3b1c2e4f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0", file.CommitId);
         Assert.Equal("3b6c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c", file.LastCommitId);
+        Assert.True(file.ExecuteFilemode);
     }
 
     [Fact]

@@ -12,7 +12,7 @@ namespace GitLab.Client.Models;
 ///     counting pages.
 /// </remarks>
 [GitLabQuery]
-public sealed record DebianDistributionListOptions
+public readonly record struct DebianDistributionListOptions
 {
     public int? PerPage { get; init; }
 

@@ -19,14 +19,19 @@ namespace GitLab.Client.Models;
 [GitLabQuery]
 public sealed record ProjectListOptions
 {
+    /// <summary>Return only projects matching this search term.</summary>
     public string? Search { get; init; }
 
+    /// <summary>Limit to projects with this visibility level.</summary>
     public GitLabVisibility? Visibility { get; init; }
 
+    /// <summary>Limit to projects carrying all of these topics (by name, not <see cref="TopicId" />).</summary>
     public IReadOnlyList<string>? Topic { get; init; }
 
+    /// <summary>Limit to archived (<c>true</c>) or non-archived (<c>false</c>) projects.</summary>
     public bool? Archived { get; init; }
 
+    /// <summary>Limit to projects last active after this instant.</summary>
     public DateTimeOffset? LastActivityAfter { get; init; }
 
     /// <summary>A calendar date, not an instant — the spec declares this one as <c>format: date</c>.</summary>

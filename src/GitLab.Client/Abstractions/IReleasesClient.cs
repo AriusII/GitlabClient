@@ -64,4 +64,28 @@ public interface IReleasesClient
     /// </summary>
     Task DeleteLinkAsync(ProjectId projectId, string tagName, long linkId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Retrieves the project's latest release by <c>released_at</c>, without needing to know its tag name
+    ///     in advance (<c>GET /projects/:id/releases/permalink/latest</c>, introduced in GitLab 15.4). The
+    ///     spec declares no response schema for this permalink route, so the raw body is returned rather than
+    ///     an invented shape - the caller must <c>await using</c> the result.
+    /// </summary>
+    Task<GitLabFileResponse> GetLatestReleaseAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Same permalink as <see cref="GetLatestReleaseAsync" />, but resolves <paramref name="suffixPath" />
+    ///     relative to the latest release - for example a path to one of its assets - without the caller
+    ///     needing the tag name up front. The caller must <c>await using</c> the result.
+    /// </summary>
+    Task<GitLabFileResponse> GetLatestReleaseSuffixPathAsync(ProjectId projectId, string suffixPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Downloads one asset file attached to a release, addressed by the direct asset path recorded on its
+    ///     link (<c>GET /projects/:id/releases/:tag_name/downloads/:direct_asset_path</c>, introduced in
+    ///     GitLab 15.4). The caller must <c>await using</c> the result.
+    /// </summary>
+    Task<GitLabFileResponse> DownloadReleaseAssetAsync(ProjectId projectId, string tagName, string directAssetPath,
+        CancellationToken cancellationToken = default);
 }

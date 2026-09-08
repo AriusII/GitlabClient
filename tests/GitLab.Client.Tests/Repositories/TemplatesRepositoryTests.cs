@@ -157,6 +157,28 @@ public sealed class TemplatesRepositoryTests
     }
 
     [Fact]
+    public async Task GetCiYmlAsync_BuildsGitlabCiYmlsRoute_AndDeserializesTheTemplate()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{ "name": "Ruby", "content": "image: ruby:3.3\n" }""", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        TemplatesRepository repository = new(connection);
+
+        GitLabTemplate template = await repository.GetCiYmlAsync("Ruby", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/templates/gitlab_ci_ymls/Ruby",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("Ruby", template.Name);
+        Assert.Equal("image: ruby:3.3\n", template.Content);
+    }
+
+    [Fact]
     public async Task ListLicensesAsync_AppendsPopularFilter_AndDeserializesTheFullLicenseEntity()
     {
         string json = $"[{LicenseJson}]";

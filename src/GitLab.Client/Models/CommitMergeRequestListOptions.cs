@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/repository/commits/:sha/merge_requests</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record CommitMergeRequestListOptions
+public readonly record struct CommitMergeRequestListOptions
 {
     /// <summary>
     ///     GitLab's merge request state filter - <c>opened</c>, <c>closed</c>, <c>locked</c>, <c>merged</c>

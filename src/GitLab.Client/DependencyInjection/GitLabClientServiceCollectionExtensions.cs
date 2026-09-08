@@ -56,6 +56,7 @@ public static partial class GitLabClientServiceCollectionExtensions
         services.TryAddSingleton<IGitLabRateLimitWriter>(static provider =>
             provider.GetRequiredService<GitLabRateLimitTracker>());
 
+        services.TryAddTransient<GitLabRetryHandler>();
         services.TryAddTransient<GitLabAuthenticationHandler>();
         services.TryAddTransient<GitLabRateLimitHandler>();
 
@@ -102,6 +103,15 @@ public static partial class GitLabClientServiceCollectionExtensions
                 // surfacing a 3xx as a GitLabApiException is both safer and more informative.
                 handler.AllowAutoRedirect = false;
             })
+            // GitLabRetryHandler must be added FIRST so it ends up OUTERMOST in the pipeline (registration
+            // order = wrapping order: the first handler added wraps every handler added after it, down to the
+            // primary handler). That placement is what makes a retry re-run the rest of the pipeline: when
+            // this handler resends a request, that call goes back down through base.SendAsync, so it passes
+            // through GitLabAuthenticationHandler again (re-stamping the token onto the freshly-built retry
+            // request) and through GitLabRateLimitHandler again (recording that attempt's own RateLimit-*
+            // response headers). Registering it after either of those would let every retry after the first
+            // one skip authentication and rate-limit bookkeeping.
+            .AddHttpMessageHandler<GitLabRetryHandler>()
             .AddHttpMessageHandler<GitLabAuthenticationHandler>()
             .AddHttpMessageHandler<GitLabRateLimitHandler>();
     }

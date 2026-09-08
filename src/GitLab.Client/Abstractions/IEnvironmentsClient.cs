@@ -6,18 +6,23 @@ namespace GitLab.Client.Abstractions;
 /// <summary>Wraps the GitLab "Environments" API area (<c>/projects/:id/environments</c>).</summary>
 public interface IEnvironmentsClient
 {
+    /// <summary>Streams every environment configured on the project.</summary>
     IAsyncEnumerable<GitLabEnvironment> ListAsync(ProjectId projectId, EnvironmentListOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Gets one environment's details.</summary>
     Task<GitLabEnvironment> GetAsync(ProjectId projectId, long environmentId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates a new environment.</summary>
     Task<GitLabEnvironment> CreateAsync(ProjectId projectId, CreateEnvironmentRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Updates an environment's external URL, tier, or other configuration.</summary>
     Task<GitLabEnvironment> UpdateAsync(ProjectId projectId, long environmentId, UpdateEnvironmentRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Stops the environment, running its <c>on_stop</c> action if one is defined.</summary>
     Task<GitLabEnvironment> StopAsync(ProjectId projectId, long environmentId,
         CancellationToken cancellationToken = default);
 
@@ -25,6 +30,7 @@ public interface IEnvironmentsClient
     Task<GitLabEnvironment> StopAsync(ProjectId projectId, long environmentId, bool force,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes an environment (<c>DELETE /projects/:id/environments/:environment_id</c>).</summary>
     Task DeleteAsync(ProjectId projectId, long environmentId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -40,9 +46,9 @@ public interface IEnvironmentsClient
     ///     (<c>DELETE /projects/:id/environments/review_apps</c>).
     ///     <para>
     ///         GitLab defaults <see cref="ReviewAppDeletionOptions.DryRun" /> to <c>true</c>, so nothing is
-    ///         scheduled unless it is explicitly set to <c>false</c>. GitLab answers with the list of affected
-    ///         environments; the transport has no <c>DELETE</c> overload that reads a response body, so that
-    ///         report - including the dry run's preview - is not surfaced.
+    ///         scheduled unless it is explicitly set to <c>false</c>. GitLab answers with the scheduled
+    ///         entries - including the dry run's preview - but this method discards that body and
+    ///         completes once the call succeeds, rather than surfacing it as a typed result.
     ///     </para>
     /// </summary>
     Task DeleteReviewAppsAsync(ProjectId projectId, ReviewAppDeletionOptions? options = null,

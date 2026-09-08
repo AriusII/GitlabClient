@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /databases/:database_name/dictionary/tables</c>.</summary>
 [GitLabQuery]
-public sealed record DictionaryTableListOptions
+public readonly record struct DictionaryTableListOptions
 {
     public GitLabDictionaryTableSize? TableSize { get; init; }
 }

@@ -15,7 +15,7 @@ namespace GitLab.Client.Repositories;
 ///     build a route or touch <see cref="IGitLabApiConnection" /> directly.
 /// </summary>
 [GenerateClientLayers(typeof(IPackagesDebianService), typeof(IPackagesDebianClient))]
-internal interface IPackagesDebianRepository
+internal partial interface IPackagesDebianRepository
 {
     // ---- Distributions (project scope) ----
 
@@ -133,8 +133,7 @@ internal interface IPackagesDebianRepository
 
     /// <summary>
     ///     The pre-flight check GitLab Workhorse expects before the actual multipart upload sends the
-    ///     package bytes. There is no paired upload method here - see
-    ///     <see cref="IPackagesDebianClient.AuthorizePackageUploadAsync" /> for why.
+    ///     package bytes. See <see cref="UploadPackageFileAsync" /> for the paired upload call.
     /// </summary>
     Task AuthorizePackageUploadAsync(ProjectId projectId, string fileName,
         AuthorizeDebianPackageUploadRequest request, CancellationToken cancellationToken = default);

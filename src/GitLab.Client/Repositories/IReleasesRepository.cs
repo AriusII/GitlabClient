@@ -51,4 +51,12 @@ internal interface IReleasesRepository
 
     Task DeleteLinkAsync(ProjectId projectId, string tagName, long linkId,
         CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> GetLatestReleaseAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> GetLatestReleaseSuffixPathAsync(ProjectId projectId, string suffixPath,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadReleaseAssetAsync(ProjectId projectId, string tagName, string directAssetPath,
+        CancellationToken cancellationToken = default);
 }

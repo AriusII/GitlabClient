@@ -9,6 +9,7 @@ public interface IDeployKeysClient
     /// <summary>Streams the deploy keys attached to one project.</summary>
     IAsyncEnumerable<GitLabDeployKey> ListAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    /// <summary>Gets one of a project's deploy keys by ID.</summary>
     Task<GitLabDeployKey> GetAsync(ProjectId projectId, long keyId, CancellationToken cancellationToken = default);
 
     /// <summary>Adds a new deploy key to the project, creating the key itself.</summary>
@@ -22,6 +23,7 @@ public interface IDeployKeysClient
     Task<GitLabDeployKey> UpdateAsync(ProjectId projectId, long keyId, UpdateDeployKeyRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Removes a deploy key from the project. If no other project uses it, GitLab deletes it entirely.</summary>
     Task DeleteAsync(ProjectId projectId, long keyId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -43,4 +45,11 @@ public interface IDeployKeysClient
     ///     attached to any project until <see cref="EnableAsync" /> grants one access to it.
     /// </summary>
     Task<GitLabDeployKey> CreateAsync(CreateDeployKeyRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every project deploy key accessible to a user (<c>GET /users/:user_id/project_deploy_keys</c>),
+    ///     across every project that user can access. Requires administrator access.
+    /// </summary>
+    IAsyncEnumerable<GitLabDeployKey> ListForUserAsync(long userId,
+        UserProjectDeployKeyListOptions? options = null, CancellationToken cancellationToken = default);
 }

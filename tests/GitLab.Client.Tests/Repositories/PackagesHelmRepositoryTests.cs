@@ -50,6 +50,19 @@ public sealed class PackagesHelmRepositoryTests
     }
 
     [Fact]
+    public async Task UploadChartAsync_ThrowsWhenChartIsNull()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.Created));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesHelmRepository repository = new(connection);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            repository.UploadChartAsync(7, "stable", null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task AuthorizeChartUploadAsync_PostsToTheAuthorizeRoute_ForTheGivenChannel()
     {
         using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK));

@@ -257,6 +257,81 @@ public sealed class PackagesDebianRepositoryTests
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
+    [Fact]
+    public async Task CreateDistributionForGroupAsync_PostsToTheDashPrefixedGroupRoute()
+    {
+        string? sentBody = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(DistributionJson, Encoding.UTF8, "application/json")
+            };
+        });
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesDebianRepository repository = new(connection);
+
+        GitLabDebianDistribution created = await repository.CreateDistributionForGroupAsync(
+            42,
+            new CreateDebianDistributionRequest { Codename = "sid", Components = ["main"] },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/groups/42/-/debian_distributions",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("""{"codename":"sid","components":["main"]}""", sentBody);
+        Assert.Equal("sid", created.Codename);
+    }
+
+    [Fact]
+    public async Task UpdateDistributionForGroupAsync_PutsTheChangedFields_ToTheDashPrefixedGroupRoute()
+    {
+        string? sentBody = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(DistributionJson, Encoding.UTF8, "application/json")
+            };
+        });
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesDebianRepository repository = new(connection);
+
+        await repository.UpdateDistributionForGroupAsync(
+            42,
+            "sid",
+            new UpdateDebianDistributionRequest { Description = "Updated" },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/groups/42/-/debian_distributions/sid",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("""{"description":"Updated"}""", sentBody);
+    }
+
+    [Fact]
+    public async Task GetDistributionKeyForGroupAsync_BuildsTheKeyAscRoute_ForTheDashPrefixedGroupRoute()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(DistributionJson, Encoding.UTF8, "application/json")
+        });
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesDebianRepository repository = new(connection);
+
+        GitLabDebianDistribution key =
+            await repository.GetDistributionKeyForGroupAsync(42, "sid", TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://gitlab.example/api/v4/groups/42/-/debian_distributions/sid/key.asc",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("sid", key.Codename);
+    }
+
     // ---- APT metadata tree (project scope) ----
 
     [Fact]

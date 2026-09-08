@@ -209,12 +209,12 @@ internal static class GitLabApiExceptionFactory
             return delta;
         }
 
-        if (retryAfter.Date is { } date)
+        if (retryAfter.Date is not { } date)
         {
-            TimeSpan remaining = date - DateTimeOffset.UtcNow;
-            return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+            return null;
         }
 
-        return null;
+        TimeSpan remaining = date - DateTimeOffset.UtcNow;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
     }
 }

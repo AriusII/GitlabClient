@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
@@ -274,5 +275,49 @@ public sealed class ApplicationsRepositoryTests
             repository.GetForCurrentUserAsync(999, TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWorkspacesHttpServerConfigAsync_BuildsTheInternalAgentwRoute_AndSurfacesTheRawPayload()
+    {
+        const string Json = """{ "server_url": "wss://workspaces.example.com", "protocol_version": 2 }""";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ApplicationsRepository repository = new(connection);
+
+        JsonElement result =
+            await repository.GetWorkspacesHttpServerConfigAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/internal/agents/agentw/server_config",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("wss://workspaces.example.com", result.GetProperty("server_url").GetString());
+        Assert.Equal(2, result.GetProperty("protocol_version").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetWorkspacesHttpServerConfigAsync_OnForbidden_ThrowsGitLabForbiddenException()
+    {
+        const string Json = """{ "message": "403 Forbidden" }""";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.Forbidden)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ApplicationsRepository repository = new(connection);
+
+        GitLabApiException exception = await Assert.ThrowsAsync<GitLabForbiddenException>(() =>
+            repository.GetWorkspacesHttpServerConfigAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(HttpStatusCode.Forbidden, exception.StatusCode);
     }
 }

@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Paging options for <c>GET /broadcast_messages</c>.</summary>
 [GitLabQuery]
-public sealed record BroadcastMessageListOptions
+public readonly record struct BroadcastMessageListOptions
 {
     /// <summary>
     ///     The first page to fetch. Listing streams every following page on its own, so this skips the pages

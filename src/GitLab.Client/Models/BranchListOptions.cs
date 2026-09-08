@@ -17,6 +17,13 @@ public sealed record BranchListOptions
     /// </summary>
     public string? Sort { get; init; }
 
+    /// <summary>
+    ///     The first page to fetch, using GitLab's offset-based paging. Listing streams every following
+    ///     page on its own, so this skips the pages before it rather than pinning the answer to a single
+    ///     page. <see cref="PageToken" /> is GitLab's newer keyset-based alternative.
+    /// </summary>
+    public int? Page { get; init; }
+
     /// <summary>Branch name to start keyset pagination from.</summary>
     public string? PageToken { get; init; }
 

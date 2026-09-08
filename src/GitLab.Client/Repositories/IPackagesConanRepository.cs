@@ -31,7 +31,7 @@ namespace GitLab.Client.Repositories;
 ///     </para>
 /// </summary>
 [GenerateClientLayers(typeof(IPackagesConanService), typeof(IPackagesConanClient))]
-internal interface IPackagesConanRepository
+internal partial interface IPackagesConanRepository
 {
     // ----- Recipes & packages (v1) -----
 
@@ -217,6 +217,11 @@ internal interface IPackagesConanRepository
     Task AuthorizePackageRevisionFileUploadAsync(ProjectId projectId, string packageName, string packageVersion,
         string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
         string packageRevision, string fileName, CancellationToken cancellationToken = default);
+
+    Task UploadPackageRevisionFileAsync(ProjectId projectId, string packageName, string packageVersion,
+        string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
+        string packageRevision, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
 
     Task<JsonElement> SearchPackageReferencesByRecipeRevisionAsync(ProjectId projectId, string packageName,
         string packageVersion, string packageUsername, string packageChannel, string recipeRevision,

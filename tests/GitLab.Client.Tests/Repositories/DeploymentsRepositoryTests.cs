@@ -125,8 +125,9 @@ public sealed class DeploymentsRepositoryTests
         Assert.Equal("deploy_to_production", latest.Deployable?.Name);
         Assert.Equal("deploy", latest.Deployable?.Stage);
 
-        // pending_approval_count is extended-shape only, so the list endpoint leaves it null.
+        // pending_approval_count and approvals are extended-shape only, so the list endpoint leaves them null.
         Assert.Null(latest.PendingApprovalCount);
+        Assert.Null(latest.Approvals);
 
         Assert.Equal(41, deployments[1].Id);
         Assert.Equal("blocked", deployments[1].Status);
@@ -172,6 +173,18 @@ public sealed class DeploymentsRepositoryTests
                                 "id": 9,
                                 "name": "production",
                                 "slug": "production"
+                              },
+                              "approvals": {
+                                "user": {
+                                  "id": 100,
+                                  "username": "security-lead",
+                                  "name": "Security Lead",
+                                  "state": "active",
+                                  "web_url": "https://gitlab.example/security-lead"
+                                },
+                                "status": "approved",
+                                "created_at": "2026-01-01T09:30:00Z",
+                                "comment": "Looks safe."
                               }
                             }
                             """;
@@ -195,6 +208,11 @@ public sealed class DeploymentsRepositoryTests
         Assert.Equal(2, deployment.PendingApprovalCount);
         Assert.Equal("production", deployment.Environment?.Name);
         Assert.Null(deployment.Deployable);
+
+        // approvals is extended-shape only, like pending_approval_count.
+        Assert.Equal("approved", deployment.Approvals?.Status);
+        Assert.Equal("security-lead", deployment.Approvals?.User?.Username);
+        Assert.Equal("Looks safe.", deployment.Approvals?.Comment);
     }
 
     [Fact]

@@ -117,6 +117,29 @@ public sealed class ExperimentsRepositoryTests
     }
 
     [Fact]
+    public async Task GetAssignmentAsync_EscapesASpecialCharacterInAContextKey()
+    {
+        const string Json = """{ "experiment": "e", "variant": "control", "context_key": "k", "cached": false }""";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        ExperimentsRepository repository = new(connection);
+
+        // The context dictionary's keys are caller-supplied free text too, not just its values - a
+        // bracket or ampersand in a key must not corrupt the query string.
+        await repository.GetAssignmentAsync("e", new Dictionary<string, string> { ["a&b"] = "1" },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://gitlab.example/api/v4/experiments/e/assignments?context[a%26b]=1",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task GetAssignmentAsync_EscapesASlashBearingExperimentName()
     {
         const string Json = """{ "experiment": "e", "variant": "control", "context_key": "k", "cached": false }""";

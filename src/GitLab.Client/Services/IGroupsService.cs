@@ -90,6 +90,8 @@ internal interface IGroupsService
     Task<GitLabGroupUploadedFile> UploadFileAsync(GroupId groupId, GitLabFileUpload file,
         CancellationToken cancellationToken = default);
 
+    Task AuthorizeUploadAsync(GroupId groupId, CancellationToken cancellationToken = default);
+
     Task<GitLabFileResponse> DownloadUploadAsync(GroupId groupId, long uploadId,
         CancellationToken cancellationToken = default);
 

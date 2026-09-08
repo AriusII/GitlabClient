@@ -41,4 +41,10 @@ internal interface IProjectHooksRepository
 
     Task DeleteCustomHeaderAsync(ProjectId projectId, long hookId, string key,
         CancellationToken cancellationToken = default);
+
+    Task UpdateUrlVariableAsync(ProjectId projectId, long hookId, string key,
+        UpdateProjectHookUrlVariableRequest request, CancellationToken cancellationToken = default);
+
+    Task UpdateCustomHeaderAsync(ProjectId projectId, long hookId, string key,
+        UpdateProjectHookCustomHeaderRequest request, CancellationToken cancellationToken = default);
 }

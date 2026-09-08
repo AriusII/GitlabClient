@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using GitLab.Client.Abstractions;
 using GitLab.Client.Domain;
 using GitLab.Client.Infrastructure.Routing;
@@ -93,5 +95,101 @@ internal sealed class JobsRepository(IGitLabApiConnection connection) : IJobsRep
                 .QueryFrom(options)
                 .Build(),
             cancellationToken);
+    }
+
+    public Task<JsonElement> RequestAsync(JobRequestRequest request, CancellationToken cancellationToken = default)
+    {
+        return connection.PostAsync(
+            GitLabRouteBuilder.Create("jobs").Literal("request").Build(),
+            request,
+            GitLabJsonContext.Default.JobRequestRequest,
+            GitLabJsonContext.Default.JsonElement,
+            cancellationToken);
+    }
+
+    public Task UpdateAsync(long jobId, UpdateJobStateRequest request, CancellationToken cancellationToken = default)
+    {
+        return connection.PutAsync(
+            JobRoute(jobId).Build(),
+            request,
+            GitLabJsonContext.Default.UpdateJobStateRequest,
+            cancellationToken);
+    }
+
+    public Task<GitLabFileResponse> DownloadArtifactsByTokenAsync(long jobId,
+        JobArtifactsByTokenDownloadOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            JobRoute(jobId).Literal("artifacts").QueryFrom(options).Build(),
+            cancellationToken);
+    }
+
+    public Task UploadArtifactsAsync(long jobId, GitLabFileUpload file, string? token = null,
+        string? expireIn = null, GitLabJobArtifactUploadType? artifactType = null,
+        GitLabJobArtifactUploadFormat? artifactFormat = null, string? accessibility = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        return connection.PostFileAsync(
+            JobRoute(jobId).Literal("artifacts").Build(),
+            file,
+            BuildArtifactUploadFormFields(token, expireIn, artifactType, artifactFormat, accessibility),
+            cancellationToken);
+    }
+
+    public Task AuthorizeArtifactsUploadAsync(long jobId, AuthorizeJobArtifactsUploadRequest? request = null,
+        CancellationToken cancellationToken = default)
+    {
+        return connection.PostAsync(
+            JobRoute(jobId).Literal("artifacts").Literal("authorize").Build(),
+            request ?? new AuthorizeJobArtifactsUploadRequest(),
+            GitLabJsonContext.Default.AuthorizeJobArtifactsUploadRequest,
+            cancellationToken);
+    }
+
+    public Task AppendTraceAsync(long jobId, AppendJobTraceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return connection.PatchAsync(
+            JobRoute(jobId).Literal("trace").Build(),
+            request,
+            GitLabJsonContext.Default.AppendJobTraceRequest,
+            cancellationToken);
+    }
+
+    /// <summary>
+    ///     The bare, project-agnostic <c>/jobs/:id</c> route the runner protocol uses - distinct from
+    ///     every other route in this class, which is scoped under <c>/projects/:id/jobs</c>.
+    /// </summary>
+    private static GitLabRouteBuilder JobRoute(long jobId)
+    {
+        return GitLabRouteBuilder.Create("jobs").Segment(jobId);
+    }
+
+    private static Dictionary<string, string>? BuildArtifactUploadFormFields(string? token, string? expireIn,
+        GitLabJobArtifactUploadType? artifactType, GitLabJobArtifactUploadFormat? artifactFormat,
+        string? accessibility)
+    {
+        Dictionary<string, string>? formFields = null;
+
+        void AddField(string name, string? value)
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            formFields ??= new Dictionary<string, string>(StringComparer.Ordinal);
+            formFields[name] = value;
+        }
+
+        AddField("token", token);
+        AddField("expire_in", expireIn);
+        AddField("artifact_type", artifactType.ToApiValue());
+        AddField("artifact_format", artifactFormat.ToApiValue());
+        AddField("accessibility", accessibility);
+
+        return formFields;
     }
 }

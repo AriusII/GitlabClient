@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     the shared type would advertise a parameter the instance and group routes silently ignore.
 /// </summary>
 [GitLabQuery]
-public sealed record ProjectSearchListOptions
+public readonly record struct ProjectSearchListOptions
 {
     /// <summary>Branch or tag to search. Defaults to the project's default branch.</summary>
     public string? Ref { get; init; }

@@ -489,4 +489,84 @@ public sealed class GenerateClientLayersGeneratorTests
             StringComparison.Ordinal);
         Assert.Contains("[global::System.Diagnostics.DebuggerNonUserCode]", service, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    ///     The doc comment must come from the REPOSITORY member specifically, not from whichever interface
+    ///     the forwarder happens to implement one layer down: the Service interface here carries its own,
+    ///     different doc comment, and the Client interface carries none at all, yet both the generated
+    ///     Service AND the generated Controller must show the Repository's text.
+    /// </summary>
+    [Fact]
+    public void CopiesTheRepositoryMemberDocCommentOntoBothGeneratedForwarders()
+    {
+        const string Source = """
+                              namespace Sample.Abstractions
+                              {
+                                  public interface IThingsClient
+                                  {
+                                      int Get(int id);
+                                  }
+                              }
+
+                              namespace Sample.Services
+                              {
+                                  internal interface IThingsService
+                                  {
+                                      /// <summary>Service-layer doc that must NOT leak onto the forwarders.</summary>
+                                      int Get(int id);
+                                  }
+                              }
+
+                              namespace Sample.Repositories
+                              {
+                                  [GitLab.Client.SourceGenerators.GenerateClientLayers(
+                                      typeof(Sample.Services.IThingsService), typeof(Sample.Abstractions.IThingsClient))]
+                                  internal interface IThingsRepository
+                                  {
+                                      /// <summary>
+                                      ///     Gets a thing by its id.
+                                      /// </summary>
+                                      /// <param name="id">The thing's id.</param>
+                                      /// <returns>The thing.</returns>
+                                      int Get(int id);
+                                  }
+                              }
+                              """;
+
+        GeneratorHarnessResult result = GeneratorSources.RunLayers(Source);
+
+        GeneratorSources.AssertNoDiagnostics(result);
+        GeneratorSources.AssertCompiles(result);
+
+        string service = result.Source(GeneratorSources.ServiceHintName);
+        string controller = result.Source(GeneratorSources.ControllerHintName);
+
+        foreach (string generated in new[] { service, controller })
+        {
+            Assert.Contains("/// <summary>", generated, StringComparison.Ordinal);
+            Assert.Contains("///     Gets a thing by its id.", generated, StringComparison.Ordinal);
+            Assert.Contains("""/// <param name="id">The thing's id.</param>""", generated, StringComparison.Ordinal);
+            Assert.Contains("/// <returns>The thing.</returns>", generated, StringComparison.Ordinal);
+            Assert.DoesNotContain("Service-layer doc that must NOT leak", generated, StringComparison.Ordinal);
+
+            // The doc comment must sit directly above the method it documents, correctly re-indented to
+            // the generated class's own 8-space member indentation - not just present anywhere in the file.
+            Assert.Contains(
+                "        /// <summary>\n        ///     Gets a thing by its id.\n        /// </summary>\n",
+                generated.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>A Repository member with no doc comment forwards exactly as it does today: undocumented.</summary>
+    [Fact]
+    public void EmitsNoDocComment_WhenTheRepositoryMemberHasNone()
+    {
+        GeneratorHarnessResult result = GeneratorSources.RunLayers(GeneratorSources.Resource());
+
+        GeneratorSources.AssertNoDiagnostics(result);
+        GeneratorSources.AssertCompiles(result);
+
+        Assert.DoesNotContain("///", result.Source(GeneratorSources.ServiceHintName), StringComparison.Ordinal);
+        Assert.DoesNotContain("///", result.Source(GeneratorSources.ControllerHintName), StringComparison.Ordinal);
+    }
 }

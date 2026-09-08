@@ -20,7 +20,7 @@ namespace GitLab.Client.Abstractions;
 ///         every implementation percent-encodes each one as its own path segment.
 ///     </para>
 /// </summary>
-public interface IPackagesDebianClient
+public partial interface IPackagesDebianClient
 {
     // ---- Distributions (project scope) ----
 
@@ -179,10 +179,7 @@ public interface IPackagesDebianClient
 
     /// <summary>
     ///     Runs the pre-flight authorization check GitLab Workhorse requires before a Debian package upload.
-    ///     There is deliberately no paired upload method here: GitLab answers the actual
-    ///     <c>PUT /projects/:id/packages/debian/:file_name</c> upload with <c>201 Created</c> and no body,
-    ///     a shape the current transport cannot express for a multipart <c>PUT</c> - see the resource's
-    ///     implementation notes.
+    ///     See <see cref="UploadPackageFileAsync" /> for the paired upload call.
     /// </summary>
     Task AuthorizePackageUploadAsync(ProjectId projectId, string fileName,
         AuthorizeDebianPackageUploadRequest request, CancellationToken cancellationToken = default);

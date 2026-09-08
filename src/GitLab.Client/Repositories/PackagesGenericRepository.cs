@@ -45,6 +45,18 @@ internal sealed class PackagesGenericRepository(IGitLabApiConnection connection)
             cancellationToken);
     }
 
+    public Task UploadMavenPackageFileAsync(ProjectId projectId, string path, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        return connection.PutFileAsync(
+            ProjectMavenRoute(projectId, path, fileName).Build(),
+            file,
+            null,
+            cancellationToken);
+    }
+
     // Generic package format.
 
     public Task<GitLabFileResponse> DownloadGenericPackageFileAsync(ProjectId projectId, string packageName,

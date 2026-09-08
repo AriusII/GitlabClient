@@ -17,6 +17,7 @@ public interface IPipelineSchedulesClient
     Task<GitLabPipelineSchedule> GetAsync(ProjectId projectId, long pipelineScheduleId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates a pipeline schedule for a project, armed and ready to fire on its cron.</summary>
     Task<GitLabPipelineSchedule> CreateAsync(ProjectId projectId, CreatePipelineScheduleRequest request,
         CancellationToken cancellationToken = default);
 
@@ -24,6 +25,7 @@ public interface IPipelineSchedulesClient
     Task<GitLabPipelineSchedule> UpdateAsync(ProjectId projectId, long pipelineScheduleId,
         UpdatePipelineScheduleRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes a pipeline schedule.</summary>
     Task DeleteAsync(ProjectId projectId, long pipelineScheduleId, CancellationToken cancellationToken = default);
 
     /// <summary>

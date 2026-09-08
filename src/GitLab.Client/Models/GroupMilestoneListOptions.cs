@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     silently ignores it.
 /// </summary>
 [GitLabQuery]
-public sealed record GroupMilestoneListOptions
+public readonly record struct GroupMilestoneListOptions
 {
     /// <summary>One of <c>"active"</c>, <c>"closed"</c> or <c>"all"</c>.</summary>
     public string? State { get; init; }

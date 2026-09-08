@@ -74,6 +74,34 @@ internal sealed class SearchRepository(IGitLabApiConnection connection) : ISearc
             GitLabJsonContext.Default.GitLabMergeRequestArray, cancellationToken);
     }
 
+    public IAsyncEnumerable<GitLabMilestone> SearchGroupMilestonesAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return SearchGroupAsync(groupId, search, MilestonesScope, options,
+            GitLabJsonContext.Default.GitLabMilestoneArray, cancellationToken);
+    }
+
+    public IAsyncEnumerable<GitLabNote> SearchGroupNotesAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return SearchGroupAsync(groupId, search, NotesScope, options, GitLabJsonContext.Default.GitLabNoteArray,
+            cancellationToken);
+    }
+
+    public IAsyncEnumerable<GitLabCommit> SearchGroupCommitsAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return SearchGroupAsync(groupId, search, CommitsScope, options, GitLabJsonContext.Default.GitLabCommitArray,
+            cancellationToken);
+    }
+
+    public IAsyncEnumerable<GitLabUser> SearchGroupUsersAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return SearchGroupAsync(groupId, search, UsersScope, options, GitLabJsonContext.Default.GitLabUserArray,
+            cancellationToken);
+    }
+
     public IAsyncEnumerable<GitLabIssue> SearchProjectIssuesAsync(ProjectId projectId, string search,
         ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -107,6 +135,13 @@ internal sealed class SearchRepository(IGitLabApiConnection connection) : ISearc
     {
         return SearchProjectAsync(projectId, search, MilestonesScope, options,
             GitLabJsonContext.Default.GitLabMilestoneArray, cancellationToken);
+    }
+
+    public IAsyncEnumerable<GitLabUser> SearchProjectUsersAsync(ProjectId projectId, string search,
+        ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return SearchProjectAsync(projectId, search, UsersScope, options, GitLabJsonContext.Default.GitLabUserArray,
+            cancellationToken);
     }
 
     /// <summary>

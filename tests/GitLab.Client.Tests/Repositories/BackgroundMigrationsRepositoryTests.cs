@@ -184,6 +184,39 @@ public sealed class BackgroundMigrationsRepositoryTests
     }
 
     [Fact]
+    public async Task ListOperationsAsync_AppliesDatabaseAndJobClassNameFilters()
+    {
+        string json = $"[{OperationJson}]";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        BackgroundMigrationsRepository repository = new(connection);
+
+        BatchedBackgroundOperationListOptions options = new()
+        {
+            Database = GitLabBackgroundJobDatabase.Ci, JobClassName = "UsersDeleteUnconfirmedSecondaryEmails"
+        };
+
+        List<GitLabBatchedBackgroundOperation> operations = new();
+        await foreach (GitLabBatchedBackgroundOperation item in
+                       repository.ListOperationsAsync(options, TestContext.Current.CancellationToken))
+        {
+            operations.Add(item);
+        }
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/admin/batched_background_operations"
+            + "?database=ci&job_class_name=UsersDeleteUnconfirmedSecondaryEmails",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Single(operations);
+    }
+
+    [Fact]
     public async Task GetOperationAsync_BuildsIdRoute()
     {
         using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -201,6 +234,27 @@ public sealed class BackgroundMigrationsRepositoryTests
         Assert.Equal("https://gitlab.example/api/v4/admin/batched_background_operations/42",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal("active", operation.Status);
+    }
+
+    [Fact]
+    public async Task GetOperationAsync_BuildsIdRoute_WithDatabaseQuery()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(OperationJson, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        BackgroundMigrationsRepository repository = new(connection);
+
+        GitLabBatchedBackgroundOperation operation = await repository.GetOperationAsync(42,
+            new BatchedBackgroundOperationGetOptions { Database = GitLabBackgroundJobDatabase.Main },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://gitlab.example/api/v4/admin/batched_background_operations/42?database=main",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("<cluster>:1:42", operation.Id);
     }
 
     [Fact]

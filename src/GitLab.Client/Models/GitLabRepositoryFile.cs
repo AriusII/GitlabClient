@@ -11,6 +11,9 @@ public sealed record GitLabRepositoryFile
 
     public string? Encoding { get; init; }
 
+    /// <summary>The SHA-256 of the file's raw (decoded) content, independent of <see cref="Encoding" />.</summary>
+    public string? ContentSha256 { get; init; }
+
     public string? Content { get; init; }
 
     public string? Ref { get; init; }
@@ -20,4 +23,7 @@ public sealed record GitLabRepositoryFile
     public string? CommitId { get; init; }
 
     public string? LastCommitId { get; init; }
+
+    /// <summary>True when the file's Git mode has the executable bit set.</summary>
+    public bool? ExecuteFilemode { get; init; }
 }

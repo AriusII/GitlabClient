@@ -32,6 +32,12 @@ public sealed record GitLabMember
     /// <summary>The member's primary email address. Returned to administrators only.</summary>
     public string? Email { get; init; }
 
+    /// <summary>
+    ///     The member's administrator-defined custom attributes, the same shape as
+    ///     <see cref="GitLabUser.CustomAttributes" />.
+    /// </summary>
+    public IReadOnlyList<GitLabCustomAttribute>? CustomAttributes { get; init; }
+
     public Uri? AvatarUrl { get; init; }
 
     /// <summary>Instance-relative avatar path (<c>/uploads/-/system/user/avatar/1/avatar.png</c>), not an absolute URL.</summary>

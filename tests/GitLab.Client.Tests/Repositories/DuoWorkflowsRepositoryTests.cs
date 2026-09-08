@@ -72,7 +72,7 @@ public sealed class DuoWorkflowsRepositoryTests
 
         List<GitLabDuoWorkflowFlowCallbackHook> hooks = [];
         await foreach (GitLabDuoWorkflowFlowCallbackHook hook in repository.ListFlowCallbacksAsync(
-                           new DuoWorkflowFlowCallbackListOptions { PerPage = 75 },
+                           new DuoWorkflowFlowCallbackListOptions { Page = 2, PerPage = 75 },
                            TestContext.Current.CancellationToken))
         {
             hooks.Add(hook);
@@ -80,7 +80,7 @@ public sealed class DuoWorkflowsRepositoryTests
 
         Assert.Empty(hooks);
 
-        Assert.Equal("https://gitlab.example/api/v4/ai/duo_workflows/flow_callbacks?per_page=75",
+        Assert.Equal("https://gitlab.example/api/v4/ai/duo_workflows/flow_callbacks?page=2&per_page=75",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 

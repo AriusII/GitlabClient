@@ -95,7 +95,11 @@ public sealed class EnvironmentsRepositoryTests
 
         EnvironmentListOptions options = new()
         {
-            Name = "review/feature", Search = "review", States = "available", PerPage = 20
+            Name = "review/feature",
+            Search = "review",
+            States = "available",
+            Page = 2,
+            PerPage = 20
         };
 
         await foreach (GitLabEnvironment _ in repository.ListAsync("gitlab-org/gitlab", options,
@@ -109,6 +113,7 @@ public sealed class EnvironmentsRepositoryTests
         Assert.Contains("name=review%2Ffeature", requestUri, StringComparison.Ordinal);
         Assert.Contains("search=review", requestUri, StringComparison.Ordinal);
         Assert.Contains("states=available", requestUri, StringComparison.Ordinal);
+        Assert.Contains("page=2", requestUri, StringComparison.Ordinal);
         Assert.Contains("per_page=20", requestUri, StringComparison.Ordinal);
     }
 

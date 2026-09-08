@@ -11,5 +11,6 @@ public sealed record GroupProtectedBranchListOptions
     /// <summary>Return only protected branches whose name matches this text.</summary>
     public string? Search { get; init; }
 
+    /// <summary>Items per page GitLab returns while the results are streamed. 20 by default, 100 at most.</summary>
     public int? PerPage { get; init; }
 }

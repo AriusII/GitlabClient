@@ -168,6 +168,14 @@ public interface IGroupsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Asks the GitLab Workhorse layer to authorize a direct file upload
+    ///     (<c>POST /groups/:id/uploads/authorize</c>) before the actual upload request. GitLab answers with
+    ///     Workhorse-internal routing details this client has no use for, so the response body is discarded;
+    ///     callers only need to know the call succeeded.
+    /// </summary>
+    Task AuthorizeUploadAsync(GroupId groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Downloads one upload by its ID (<c>GET /groups/:id/uploads/:upload_id</c>). The caller owns the
     ///     returned response and must dispose it.
     /// </summary>

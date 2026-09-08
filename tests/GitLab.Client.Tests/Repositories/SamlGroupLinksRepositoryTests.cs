@@ -185,6 +185,22 @@ public sealed class SamlGroupLinksRepositoryTests
     }
 
     [Fact]
+    public async Task DeleteAsync_OmitsTheProviderWhenItWasNotSupplied()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SamlGroupLinksRepository repository = new(connection);
+
+        await repository.DeleteAsync(33, "saml-group-1", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/groups/33/saml_group_links/saml-group-1",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task GetAsync_SurfacesTheAmbiguousLinkErrorAsAValidationException()
     {
         // With more than one SAML provider configured, a name-only lookup is answered with 422 asking

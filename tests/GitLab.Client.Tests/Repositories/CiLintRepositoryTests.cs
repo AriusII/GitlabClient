@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
@@ -197,6 +198,43 @@ public sealed class CiLintRepositoryTests
         Assert.Equal("{\"content\":\"stages: [build]\"}", sentBody);
         Assert.True(result.Valid);
         Assert.Null(result.Errors);
+    }
+
+    /// <summary>
+    ///     GitLab's spec leaves each job's shape unspecified (a bare <c>object</c>), so
+    ///     <see cref="GitLabCiLintResult.Jobs" /> must round-trip whatever fields are present rather than
+    ///     drop the array entirely.
+    /// </summary>
+    [Fact]
+    public async Task ValidateAsync_WithIncludeJobs_DeserializesTheJobsArray()
+    {
+        const string Json = """
+                            {
+                              "valid": true,
+                              "errors": [],
+                              "warnings": [],
+                              "jobs": [
+                                { "name": "test", "stage": "test", "before_script": [], "script": ["echo"], "tags": [], "when": "on_success", "allow_failure": false, "only": ["branches"], "except": null }
+                              ]
+                            }
+                            """;
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        CiLintRepository repository = new(connection);
+
+        GitLabCiLintResult result = await repository.ValidateAsync(1,
+            new ValidateCiConfigurationRequest { Content = "stages: [test]", IncludeJobs = true },
+            TestContext.Current.CancellationToken);
+
+        JsonElement job = Assert.Single(result.Jobs!);
+        Assert.Equal("test", job.GetProperty("name").GetString());
+        Assert.Equal("on_success", job.GetProperty("when").GetString());
     }
 
     [Fact]

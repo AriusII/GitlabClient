@@ -34,6 +34,18 @@ internal interface ISearchService
     IAsyncEnumerable<GitLabMergeRequest> SearchGroupMergeRequestsAsync(GroupId groupId, string search,
         SearchListOptions? options = null, CancellationToken cancellationToken = default);
 
+    IAsyncEnumerable<GitLabMilestone> SearchGroupMilestonesAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabNote> SearchGroupNotesAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabCommit> SearchGroupCommitsAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabUser> SearchGroupUsersAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
     IAsyncEnumerable<GitLabIssue> SearchProjectIssuesAsync(ProjectId projectId, string search,
         ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
 
@@ -47,6 +59,9 @@ internal interface ISearchService
         ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
 
     IAsyncEnumerable<GitLabMilestone> SearchProjectMilestonesAsync(ProjectId projectId, string search,
+        ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabUser> SearchProjectUsersAsync(ProjectId projectId, string search,
         ProjectSearchListOptions? options = null, CancellationToken cancellationToken = default);
 
     Task<JsonElement> ListSearchMigrationsAsync(CancellationToken cancellationToken = default);

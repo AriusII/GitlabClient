@@ -1,8 +1,9 @@
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Request body for <c>PUT /groups/:id/members/:user_id</c>. Separate from
-///     <see cref="UpdateMemberRequest" /> because the group route also accepts a custom member role.
+///     Request body for <c>PUT /groups/:id/members/:user_id</c>. A separate type from
+///     <see cref="UpdateMemberRequest" /> - one request DTO per operation, per this library's convention -
+///     even though both routes now accept the same fields, including <see cref="MemberRoleId" />.
 /// </summary>
 public sealed record UpdateGroupMemberRequest
 {

@@ -15,4 +15,10 @@ namespace GitLab.Client.Repositories;
 internal interface IDependencyProxyRepository
 {
     Task PurgeCacheAsync(GroupId groupId, CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadMavenPackageFileAsync(ProjectId projectId, string path, string fileName,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadNpmPackageTarballAsync(ProjectId projectId, string packageName, string fileName,
+        CancellationToken cancellationToken = default);
 }

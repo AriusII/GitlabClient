@@ -6,5 +6,7 @@ namespace GitLab.Client.Models;
 [GitLabQuery]
 public sealed record DuoWorkflowFlowCallbackListOptions
 {
+    public int? Page { get; init; }
+
     public int? PerPage { get; init; }
 }

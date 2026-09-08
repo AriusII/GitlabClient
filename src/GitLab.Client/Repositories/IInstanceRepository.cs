@@ -17,6 +17,21 @@ internal interface IInstanceRepository
 {
     Task<GitLabAppearance> GetAppearanceAsync(CancellationToken cancellationToken = default);
 
+    Task<GitLabAppearance> UpdateAppearanceAsync(UpdateApplicationAppearanceRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabAppearance> SetAppearanceLogoAsync(GitLabFileUpload logo,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabAppearance> SetAppearanceHeaderLogoAsync(GitLabFileUpload headerLogo,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabAppearance> SetAppearancePwaIconAsync(GitLabFileUpload pwaIcon,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabAppearance> SetAppearanceFaviconAsync(GitLabFileUpload favicon,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabApplicationSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
 
     Task<GitLabApplicationSettings> UpdateSettingsAsync(UpdateApplicationSettingsRequest request,

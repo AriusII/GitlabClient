@@ -6,7 +6,9 @@ namespace GitLab.Client.Abstractions;
 /// <summary>Wraps the GitLab "Merge Requests" API area (<c>/projects/{id}/merge_requests</c>).</summary>
 public interface IMergeRequestsClient
 {
-    /// <summary>Reads one merge request by its project-scoped iid.</summary>
+    /// <summary>
+    ///     Reads one merge request by its project-scoped iid (<c>GET /projects/:id/merge_requests/:iid</c>).
+    /// </summary>
     Task<GitLabMergeRequest> GetAsync(ProjectId projectId, long mergeRequestIid,
         CancellationToken cancellationToken = default);
 

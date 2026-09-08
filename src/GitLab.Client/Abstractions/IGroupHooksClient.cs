@@ -69,4 +69,18 @@ public interface IGroupHooksClient
     /// <summary>Removes one custom header from the hook, leaving the others in place.</summary>
     Task DeleteCustomHeaderAsync(GroupId groupId, long hookId, string key,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Sets one URL variable's value, leaving the others in place. GitLab answers <c>200</c> with no
+    ///     body and never echoes the value back.
+    /// </summary>
+    Task UpdateUrlVariableAsync(GroupId groupId, long hookId, string key, UpdateGroupHookUrlVariableRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Sets one custom header's value, leaving the others in place. GitLab answers <c>200</c> with no
+    ///     body and never echoes the value back.
+    /// </summary>
+    Task UpdateCustomHeaderAsync(GroupId groupId, long hookId, string key, UpdateGroupHookCustomHeaderRequest request,
+        CancellationToken cancellationToken = default);
 }

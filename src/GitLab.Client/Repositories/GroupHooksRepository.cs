@@ -101,4 +101,28 @@ internal sealed class GroupHooksRepository(IGitLabApiConnection connection) : IG
                 .Literal("custom_headers").Escaped(key).Build(),
             cancellationToken);
     }
+
+    public Task UpdateUrlVariableAsync(GroupId groupId, long hookId, string key,
+        UpdateGroupHookUrlVariableRequest request, CancellationToken cancellationToken = default)
+    {
+        // 200 with no body: the value being set is secret-adjacent, and GitLab never echoes it back.
+        return connection.PutAsync(
+            GitLabRouteBuilder.Create("groups").Segment(groupId).Literal("hooks").Segment(hookId)
+                .Literal("url_variables").Escaped(key).Build(),
+            request,
+            GitLabJsonContext.Default.UpdateGroupHookUrlVariableRequest,
+            cancellationToken);
+    }
+
+    public Task UpdateCustomHeaderAsync(GroupId groupId, long hookId, string key,
+        UpdateGroupHookCustomHeaderRequest request, CancellationToken cancellationToken = default)
+    {
+        // 200 with no body: the value being set is secret-adjacent, and GitLab never echoes it back.
+        return connection.PutAsync(
+            GitLabRouteBuilder.Create("groups").Segment(groupId).Literal("hooks").Segment(hookId)
+                .Literal("custom_headers").Escaped(key).Build(),
+            request,
+            GitLabJsonContext.Default.UpdateGroupHookCustomHeaderRequest,
+            cancellationToken);
+    }
 }

@@ -11,7 +11,8 @@ namespace GitLab.Client.Services;
 /// </summary>
 internal interface ICommitsService
 {
-    Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, CancellationToken cancellationToken = default);
+    Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, bool? stats = null,
+        CancellationToken cancellationToken = default);
 
     IAsyncEnumerable<GitLabCommit> ListAsync(ProjectId projectId, CommitListOptions? options = null,
         CancellationToken cancellationToken = default);

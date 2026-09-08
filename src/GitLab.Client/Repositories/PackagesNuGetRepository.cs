@@ -8,6 +8,12 @@ namespace GitLab.Client.Repositories;
 
 internal sealed class PackagesNuGetRepository(IGitLabApiConnection connection) : IPackagesNuGetRepository
 {
+    /// <summary>
+    ///     The form field GitLab's NuGet package upload endpoints (v3, v2 and symbol package) read the
+    ///     uploaded file from - "file", the <see cref="GitLabFileUpload" /> default, is silently ignored here.
+    /// </summary>
+    private const string PackageFieldName = "package";
+
     // Group scope.
 
     public Task<GitLabNugetServiceIndex> GetServiceIndexForGroupAsync(GroupId groupId,
@@ -77,6 +83,18 @@ internal sealed class PackagesNuGetRepository(IGitLabApiConnection connection) :
     {
         return connection.PutAsync(
             ProjectNugetRoute(projectId).Literal("authorize").Build(),
+            cancellationToken);
+    }
+
+    public Task UploadPackageAsync(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+
+        return connection.PutFileAsync(
+            ProjectNugetRoute(projectId).Build(),
+            package with { FieldName = PackageFieldName },
+            null,
             cancellationToken);
     }
 
@@ -151,6 +169,18 @@ internal sealed class PackagesNuGetRepository(IGitLabApiConnection connection) :
             cancellationToken);
     }
 
+    public Task UploadSymbolPackageAsync(ProjectId projectId, GitLabFileUpload symbolPackage,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(symbolPackage);
+
+        return connection.PutFileAsync(
+            ProjectNugetRoute(projectId).Literal("symbolpackage").Build(),
+            symbolPackage with { FieldName = PackageFieldName },
+            null,
+            cancellationToken);
+    }
+
     public Task<GitLabFileResponse> GetV2ServiceIndexAsync(ProjectId projectId,
         CancellationToken cancellationToken = default)
     {
@@ -171,6 +201,18 @@ internal sealed class PackagesNuGetRepository(IGitLabApiConnection connection) :
     {
         return connection.PutAsync(
             ProjectNugetRoute(projectId).Literal("v2").Literal("authorize").Build(),
+            cancellationToken);
+    }
+
+    public Task UploadPackageV2Async(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+
+        return connection.PutFileAsync(
+            ProjectNugetRoute(projectId).Literal("v2").Build(),
+            package with { FieldName = PackageFieldName },
+            null,
             cancellationToken);
     }
 
@@ -195,6 +237,16 @@ internal sealed class PackagesNuGetRepository(IGitLabApiConnection connection) :
     {
         return connection.GetFileAsync(
             ProjectNugetRoute(projectId).Literal("v2").Literal("Packages()").Query("$filter", filter).Build(),
+            cancellationToken);
+    }
+
+    public Task<GitLabFileResponse> GetV2PackageMetadataAsync(ProjectId projectId, string packageName,
+        string packageVersion, CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            ProjectNugetRoute(projectId).Literal("v2")
+                .EscapedTemplate("Packages(Id='{0}',Version='{1}')", packageName, packageVersion)
+                .Build(),
             cancellationToken);
     }
 

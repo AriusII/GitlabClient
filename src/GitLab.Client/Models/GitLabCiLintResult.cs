@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace GitLab.Client.Models;
 
 /// <summary>
@@ -10,8 +12,10 @@ public sealed record GitLabCiLintResult
     /// <summary>Whether the configuration is valid. Check this - a successful call does not mean valid YAML.</summary>
     public bool? Valid { get; init; }
 
+    /// <summary>Why the configuration is invalid, one message per problem. Empty (not null) when <see cref="Valid" /> is true.</summary>
     public IReadOnlyList<string>? Errors { get; init; }
 
+    /// <summary>Non-fatal problems with an otherwise valid configuration.</summary>
     public IReadOnlyList<string>? Warnings { get; init; }
 
     /// <summary>
@@ -21,4 +25,13 @@ public sealed record GitLabCiLintResult
     public string? MergedYaml { get; init; }
 
     public IReadOnlyList<GitLabCiLintInclude>? Includes { get; init; }
+
+    /// <summary>
+    ///     The jobs the configuration would produce, present only when the request opted in via
+    ///     <see cref="CiLintOptions.IncludeJobs" /> or <see cref="ValidateCiConfigurationRequest.IncludeJobs" />.
+    ///     GitLab's spec leaves each job's shape unspecified, so entries are surfaced as raw
+    ///     <see cref="JsonElement" /> rather than an invented DTO - the same convention
+    ///     <see cref="CiCatalogPublishRequest.Metadata" /> uses for its own untyped object.
+    /// </summary>
+    public IReadOnlyList<JsonElement>? Jobs { get; init; }
 }

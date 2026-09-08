@@ -13,7 +13,7 @@ namespace GitLab.Client.Services;
 ///     seam where request validation, caching, or cross-resource composition would go once the resource
 ///     needs more than pass-through.
 /// </summary>
-internal interface IPackagesConanService
+internal partial interface IPackagesConanService
 {
     // ----- Recipes & packages (v1) -----
 
@@ -199,6 +199,11 @@ internal interface IPackagesConanService
     Task AuthorizePackageRevisionFileUploadAsync(ProjectId projectId, string packageName, string packageVersion,
         string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
         string packageRevision, string fileName, CancellationToken cancellationToken = default);
+
+    Task UploadPackageRevisionFileAsync(ProjectId projectId, string packageName, string packageVersion,
+        string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
+        string packageRevision, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
 
     Task<JsonElement> SearchPackageReferencesByRecipeRevisionAsync(ProjectId projectId, string packageName,
         string packageVersion, string packageUsername, string packageChannel, string recipeRevision,

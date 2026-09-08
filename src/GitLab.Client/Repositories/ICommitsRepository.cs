@@ -15,7 +15,8 @@ namespace GitLab.Client.Repositories;
 [GenerateClientLayers(typeof(ICommitsService), typeof(ICommitsClient))]
 internal interface ICommitsRepository
 {
-    Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, CancellationToken cancellationToken = default);
+    Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, bool? stats = null,
+        CancellationToken cancellationToken = default);
 
     IAsyncEnumerable<GitLabCommit> ListAsync(ProjectId projectId, CommitListOptions? options = null,
         CancellationToken cancellationToken = default);

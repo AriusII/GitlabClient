@@ -2,15 +2,16 @@ namespace GitLab.Client.Models;
 
 /// <summary>
 ///     The instance-wide branding shown on the sign-in and sign-up pages, as returned by
-///     <c>GET /application/appearance</c>.
+///     <c>GET /application/appearance</c> and by every write to it.
 ///     <para>
-///         GitLab's write side (<c>PUT /application/appearance</c>) is declared entirely as
-///         <c>multipart/form-data</c>, including for text-only updates, and four of its fields
-///         (<c>logo</c>, <c>pwa_icon</c>, <c>header_logo</c>, <c>favicon</c>) are file uploads that may
-///         be set independently of one another. The transport's multipart primitives always require
-///         exactly one file per call, with no way to send a file-less multipart body or more than one
-///         file field at a time, so that operation is not wrapped here - see the Instance resource's
-///         integration notes.
+///         GitLab's write side (<c>PUT /application/appearance</c>) is one route with two shapes: the
+///         text and boolean fields below travel as a plain JSON body through
+///         <see cref="Abstractions.IInstanceClient.UpdateAppearanceAsync" />, while the four binary
+///         fields (<c>logo</c>, <c>pwa_icon</c>, <c>header_logo</c>, <c>favicon</c>) - each independently
+///         settable - go through their own <c>multipart/form-data</c> call
+///         (<see cref="Abstractions.IInstanceClient.SetAppearanceLogoAsync" /> and its three siblings),
+///         since a single multipart request can carry only one file part at a time. This mirrors how
+///         GitLab's own documentation demonstrates the endpoint.
 ///     </para>
 /// </summary>
 public sealed record GitLabAppearance

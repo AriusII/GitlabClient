@@ -16,7 +16,7 @@ namespace GitLab.Client.Models;
 ///     hundreds of label events, and raising the page size cuts the number of round trips.
 /// </remarks>
 [GitLabQuery]
-public sealed record ResourceEventListOptions
+public readonly record struct ResourceEventListOptions
 {
     /// <summary>Items per page. GitLab defaults to 20 and caps the value at 100.</summary>
     public int? PerPage { get; init; }

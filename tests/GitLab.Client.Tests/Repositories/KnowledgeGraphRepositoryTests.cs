@@ -87,6 +87,25 @@ public sealed class KnowledgeGraphRepositoryTests
     }
 
     [Fact]
+    public async Task DisableNamespaceAsync_PercentEncodesANamespacePathId()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        KnowledgeGraphRepository repository = new(connection);
+
+        // Unlike the numeric-id case above, a namespace addressed by its full path must survive as one
+        // path segment - the "/" has to come through as "%2F" or GitLab 404s against a route that
+        // doesn't exist.
+        await repository.DisableNamespaceAsync("group/subgroup", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/admin/knowledge_graph/namespaces/group%2Fsubgroup",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task EnableNamespaceAsync_OnForbidden_ThrowsGitLabForbiddenException()
     {
         const string Json = """{ "message": "403 Forbidden" }""";

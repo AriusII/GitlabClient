@@ -70,8 +70,14 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
                                                /// query parameter, named by snake_case of the property name unless [QueryParameter] says
                                                /// otherwise, and written in declaration order.
                                                /// </summary>
+                                               /// <remarks>
+                                               /// Targets both Class and Struct: the annotated type is a record today, but a
+                                               /// <c>readonly record struct</c> is a struct declaration as far as attribute targeting is
+                                               /// concerned, and restricting this to Class would make [GitLabQuery] inapplicable there
+                                               /// (CS0592) before the generator itself ever gets a say.
+                                               /// </remarks>
                                                [global::Microsoft.CodeAnalysis.EmbeddedAttribute]
-                                               [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+                                               [global::System.AttributeUsage(global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
                                                internal sealed class GitLabQueryAttribute : global::System.Attribute
                                                {
                                                }
@@ -228,7 +234,7 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             return null;
         }
 
-        OptionsModel model = new(optionsType.Name, Fqn(optionsType));
+        OptionsModel model = new(optionsType.Name, Fqn(optionsType), optionsType.IsValueType);
         Dictionary<string, string> claimedNames = new(StringComparer.Ordinal);
 
         foreach (IPropertySymbol property in optionsType.GetMembers().OfType<IPropertySymbol>())
@@ -420,6 +426,12 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             builder.AppendLine();
         }
 
+        // T? means Nullable<T> once T is a struct, and Nullable<T> does not forward member access to
+        // T - "options.PropertyName" would not compile there. The null-check above still works
+        // unchanged for both shapes (Nullable<T> supports comparison to null via its own equality); only
+        // the property-access prefix needs to switch to "options.Value." for a value-typed T.
+        string accessPrefix = model.IsValueType ? "options.Value." : "options.";
+
         foreach (PropertyModel property in model.Properties)
         {
             // Statements, not a fluent chain: an enum needs a helper call around the value, which a
@@ -427,8 +439,8 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             // uniform and the emitted file readable in obj/Generated.
             string method = property.Repeated ? "QueryRepeated" : "Query";
             string argument = property.Kind == QueryKind.Enum
-                ? $"{property.EnumHelper}.ToApiValue(options.{property.PropertyName})"
-                : $"options.{property.PropertyName}";
+                ? $"{property.EnumHelper}.ToApiValue({accessPrefix}{property.PropertyName})"
+                : $"{accessPrefix}{property.PropertyName}";
 
             builder.Append("            builder.").Append(method).Append("(\"").Append(property.WireName)
                 .Append("\", ").Append(argument).AppendLine(");");
@@ -612,11 +624,19 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
     // Plain classes, not records: a record's generated equality would compare any symbol-typed member
     // with reference equality instead of SymbolEqualityComparer (RS1024). Same trade-off
     // GenerateClientLayersGenerator already documents and accepts.
-    private sealed class OptionsModel(string typeName, string fullyQualifiedType)
+    private sealed class OptionsModel(string typeName, string fullyQualifiedType, bool isValueType)
     {
         public string TypeName { get; } = typeName;
 
         public string FullyQualifiedType { get; } = fullyQualifiedType;
+
+        /// <summary>
+        ///     Whether the annotated type is a struct rather than a class/record. Drives whether the
+        ///     generated <c>QueryFrom</c> accesses properties through <c>options.</c> (reference type,
+        ///     where <c>T?</c> means nullable reference) or <c>options.Value.</c> (value type, where
+        ///     <c>T?</c> means <see cref="System.Nullable{T}" />, which does not forward member access).
+        /// </summary>
+        public bool IsValueType { get; } = isValueType;
 
         public List<PropertyModel> Properties { get; } = new();
 

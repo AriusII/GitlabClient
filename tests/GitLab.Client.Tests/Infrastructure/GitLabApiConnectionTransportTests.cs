@@ -241,6 +241,112 @@ public sealed class GitLabApiConnectionTransportTests
     }
 
     [Fact]
+    public async Task PostFileAsync_WithAResponse_CompletesEvenWhenSlowerThanTheFixedHttpClientTimeout()
+    {
+        // Regression test for the upload-side counterpart of GetFileAsync's post-header CancelAfter: sending
+        // a large multipart body is the payload-size-dependent phase for an upload, so - like a big download
+        // past the headers - it must survive outliving the fixed httpClient.Timeout many times over instead
+        // of being spuriously cancelled. This exercises SendFileAsync<TResponse> via the public overload.
+        using DelayingHttpMessageHandler handler = new(TimeSpan.FromMilliseconds(300),
+            () => new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(ProjectJson, Encoding.UTF8, "application/json")
+            });
+
+        using HttpClient httpClient = new(handler)
+        {
+            BaseAddress = BaseAddress, Timeout = TimeSpan.FromMilliseconds(50)
+        };
+        GitLabApiConnection connection = new(httpClient);
+
+        using MemoryStream content = new("PNG-BYTES"u8.ToArray());
+        GitLabFileUpload upload = new() { Content = content, FileName = "logo.png" };
+
+        GitLabProject project = await connection.PostFileAsync(
+            UploadsRoute,
+            upload,
+            null,
+            GitLabJsonContext.Default.GitLabProject,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(42, project.Id);
+    }
+
+    [Fact]
+    public async Task PostFileAsync_NonGeneric_CompletesEvenWhenSlowerThanTheFixedHttpClientTimeout()
+    {
+        // Same regression as above, for the non-generic overload's own CreateUnboundedOperation call site.
+        using DelayingHttpMessageHandler handler = new(TimeSpan.FromMilliseconds(300),
+            static () => new HttpResponseMessage(HttpStatusCode.Created));
+
+        using HttpClient httpClient = new(handler)
+        {
+            BaseAddress = BaseAddress, Timeout = TimeSpan.FromMilliseconds(50)
+        };
+        GitLabApiConnection connection = new(httpClient);
+
+        using MemoryStream content = new("PNG-BYTES"u8.ToArray());
+        GitLabFileUpload upload = new() { Content = content, FileName = "logo.png" };
+
+        // No exception is the assertion: the old CreateOperationTimeout-bound call would have thrown
+        // TaskCanceledException here well before the handler's 300ms delay elapsed.
+        await connection.PostFileAsync(UploadsRoute, upload, null, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task PutFileAsync_NonGeneric_CompletesEvenWhenSlowerThanTheFixedHttpClientTimeout()
+    {
+        // Same regression as above, for PutFileAsync's own CreateUnboundedOperation call site.
+        using DelayingHttpMessageHandler handler = new(TimeSpan.FromMilliseconds(300),
+            static () => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler)
+        {
+            BaseAddress = BaseAddress, Timeout = TimeSpan.FromMilliseconds(50)
+        };
+        GitLabApiConnection connection = new(httpClient);
+
+        using MemoryStream content = new("AVATAR"u8.ToArray());
+
+        await connection.PutFileAsync(
+            new Uri("projects/42", UriKind.Relative),
+            new GitLabFileUpload { Content = content, FileName = "avatar.png", FieldName = "avatar" },
+            null,
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task PostFileAsync_StillHonorsTheCallersOwnCancellation()
+    {
+        // Removing the fixed httpClient.Timeout bound must not remove cancellation altogether: the operation
+        // source stays linked to the caller's own token, exactly as GetFileAsync's post-header source does.
+        using DelayingHttpMessageHandler handler = new(TimeSpan.FromSeconds(30),
+            () => new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(ProjectJson, Encoding.UTF8, "application/json")
+            });
+
+        using HttpClient httpClient = new(handler)
+        {
+            BaseAddress = BaseAddress, Timeout = Timeout.InfiniteTimeSpan
+        };
+        GitLabApiConnection connection = new(httpClient);
+
+        using MemoryStream content = new("PNG-BYTES"u8.ToArray());
+        GitLabFileUpload upload = new() { Content = content, FileName = "logo.png" };
+
+        using CancellationTokenSource cancellation = new(TimeSpan.FromMilliseconds(100));
+
+        OperationCanceledException exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            connection.PostFileAsync(UploadsRoute, upload, null, GitLabJsonContext.Default.GitLabProject,
+                cancellation.Token));
+
+        // Mirrors GitLabApiConnectionTests' GetAsync_ReportsCallerCancellation test: a genuine caller
+        // cancellation must not be rewritten into the "our own budget elapsed" timeout shape.
+        Assert.False(exception.InnerException is TimeoutException);
+    }
+
+    [Fact]
     public async Task HeadAsync_ReportsNotExists_OnA404_WithoutThrowing()
     {
         using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
@@ -473,6 +579,31 @@ public sealed class GitLabApiConnectionTransportTests
             {
                 RequestBody = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             }
+
+            HttpResponseMessage response = respond();
+            response.RequestMessage ??= request;
+            return response;
+        }
+    }
+
+    /// <summary>
+    ///     Stands in for a slow-but-healthy upload: drains the multipart body the way a real socket write
+    ///     would, then delays before answering. The delay is what a fixed httpClient.Timeout would have to
+    ///     race against, so honoring it or not is exactly the behaviour under test in the timeout/cancellation
+    ///     tests above.
+    /// </summary>
+    private sealed class DelayingHttpMessageHandler(TimeSpan delay, Func<HttpResponseMessage> respond)
+        : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.Content is not null)
+            {
+                await request.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 
             HttpResponseMessage response = respond();
             response.RequestMessage ??= request;

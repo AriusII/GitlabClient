@@ -11,7 +11,7 @@ namespace GitLab.Client.Services;
 ///     seam where request validation, caching, or cross-resource composition would go once the resource
 ///     needs more than pass-through.
 /// </summary>
-internal interface IPackagesDebianService
+internal partial interface IPackagesDebianService
 {
     IAsyncEnumerable<GitLabDebianDistribution> ListDistributionsForProjectAsync(ProjectId projectId,
         DebianDistributionListOptions? options = null, CancellationToken cancellationToken = default);

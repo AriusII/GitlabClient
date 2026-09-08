@@ -39,7 +39,7 @@ public interface ITerraformStatesClient
     /// <summary>
     ///     Stores a Terraform state, creating it or appending a new version to it. This is the write half
     ///     of Terraform's HTTP backend, and the counterpart to
-    ///     <see cref="DownloadAsync(ProjectId, string, string, CancellationToken)" />.
+    ///     <see cref="DownloadAsync(ProjectId, string, string?, CancellationToken)" />.
     ///     <para>
     ///         GitLab takes the document as a <c>multipart/form-data</c> upload and answers with no body,
     ///         so nothing is returned; the new serial is whatever the uploaded document declares.

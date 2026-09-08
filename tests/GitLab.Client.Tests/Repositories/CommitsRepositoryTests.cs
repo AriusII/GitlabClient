@@ -34,7 +34,7 @@ public sealed class CommitsRepositoryTests
         CommitsRepository repository = new(connection);
 
         GitLabCommit commit = await repository.GetAsync(42, "6104942438c14ec7bd21c6cd5bd995272b3faff6",
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(
             "https://gitlab.example/api/v4/projects/42/repository/commits/6104942438c14ec7bd21c6cd5bd995272b3faff6",
@@ -65,10 +65,40 @@ public sealed class CommitsRepositoryTests
         GitLabApiConnection connection = new(httpClient);
         CommitsRepository repository = new(connection);
 
-        await repository.GetAsync(42, "release/1.0", TestContext.Current.CancellationToken);
+        await repository.GetAsync(42, "release/1.0", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(
             "https://gitlab.example/api/v4/projects/42/repository/commits/release%2F1.0",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task GetAsync_WithStatsFalse_AddsStatsQueryParameter()
+    {
+        const string Json = """
+                            {
+                              "id": "6104942438c14ec7bd21c6cd5bd995272b3faff6",
+                              "short_id": "6104942438c",
+                              "title": "Sanitize for network graph",
+                              "web_url": "https://gitlab.example.com/janedoe/gitlab-foss/-/commit/6104942438c14ec7bd21c6cd5bd995272b3faff6"
+                            }
+                            """;
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        CommitsRepository repository = new(connection);
+
+        await repository.GetAsync(42, "6104942438c14ec7bd21c6cd5bd995272b3faff6", false,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/42/repository/commits/"
+            + "6104942438c14ec7bd21c6cd5bd995272b3faff6?stats=false",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
@@ -87,7 +117,7 @@ public sealed class CommitsRepositoryTests
         CommitsRepository repository = new(connection);
 
         GitLabApiException exception = await Assert.ThrowsAsync<GitLabNotFoundException>(() =>
-            repository.GetAsync(42, "deadbeef", TestContext.Current.CancellationToken));
+            repository.GetAsync(42, "deadbeef", cancellationToken: TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
         Assert.Equal("404 Commit Not Found", exception.Message);

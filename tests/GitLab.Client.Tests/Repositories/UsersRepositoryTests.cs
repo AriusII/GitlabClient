@@ -29,6 +29,7 @@ public sealed class UsersRepositoryTests
                                            "web_url": "https://gitlab.example/octocat",
                                            "created_at": "2012-05-23T08:00:58Z",
                                            "bio": "Ships things.",
+                                           "bio_html": "<p>Ships things.</p>",
                                            "location": "Lyon",
                                            "linkedin": "",
                                            "twitter": "",
@@ -141,6 +142,7 @@ public sealed class UsersRepositoryTests
         Assert.Equal("/uploads/-/system/user/avatar/7/avatar.png", user.AvatarPath);
         Assert.Equal(new DateTimeOffset(2012, 5, 23, 8, 0, 58, TimeSpan.Zero), user.CreatedAt);
         Assert.Equal("Ships things.", user.Bio);
+        Assert.Equal("<p>Ships things.</p>", user.BioHtml);
         Assert.Equal("Acme", user.Organization);
         Assert.Equal("Engineer at Acme", user.WorkInformation);
         Assert.Equal(3, user.Followers);

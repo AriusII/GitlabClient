@@ -42,14 +42,16 @@ public sealed record GitLabDeployKey
     public bool? CanPush { get; init; }
 
     /// <summary>
-    ///     The projects this key can push to, beyond the one it was created on. Returned only by the
-    ///     instance-wide <c>POST /deploy_keys</c> (administrator-only) response.
+    ///     The projects this key can push to, beyond the one it was created on. Populated only on the plain
+    ///     <c>APIEntitiesDeployKey</c> shape - the instance-wide list and create endpoints, and the
+    ///     project-scoped update - never on the project-scoped list, get or add shape.
     /// </summary>
     public GitLabProjectIdentity? ProjectsWithWriteAccess { get; init; }
 
     /// <summary>
-    ///     The projects this key can read but not push to. Returned only by the instance-wide
-    ///     <c>POST /deploy_keys</c> (administrator-only) response.
+    ///     The projects this key can read but not push to. Populated only on the plain
+    ///     <c>APIEntitiesDeployKey</c> shape - the instance-wide list and create endpoints, and the
+    ///     project-scoped update - never on the project-scoped list, get or add shape.
     /// </summary>
     public GitLabProjectIdentity? ProjectsWithReadonlyAccess { get; init; }
 }

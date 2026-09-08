@@ -12,11 +12,14 @@ namespace GitLab.Client.Repositories;
 ///     The Conan v2 protocol area: revision-aware recipe and package metadata, files and file transfer,
 ///     project-scoped only - GitLab exposes no instance-wide v2 route.
 ///     <para>
-///         As in <c>PackagesConanRepository.Files.cs</c>, the two <c>PUT .../files/:file_name</c>
-///         upload endpoints (recipe-revision and package-revision file upload) are not implemented: they
-///         are a multipart <c>PUT</c> that answers with an empty body, and the transport's
+///         As in <c>PackagesConanRepository.Files.cs</c>, the two <c>PUT .../files/:file_name</c> upload
+///         endpoints (recipe-revision and package-revision file upload) could not originally be expressed
+///         here: they are a multipart <c>PUT</c> that answers with an empty body, and
 ///         <c>IGitLabApiConnection.PutFileAsync&lt;TResponse&gt;</c> requires a JSON response to
-///         deserialize.
+///         deserialize. Both are now implemented against the transport's no-content <c>PutFileAsync</c>
+///         sibling - the recipe-revision upload in <c>PackagesConanRepository.H.cs</c> and the
+///         package-revision upload in <c>PackagesConanRepository.I.cs</c> - reusing the route helpers
+///         declared below.
 ///     </para>
 /// </summary>
 internal sealed partial class PackagesConanRepository

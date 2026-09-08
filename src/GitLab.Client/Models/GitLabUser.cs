@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     <para>
 ///         GitLab returns this one entity at three widths - <c>UserBasic</c> in every embedding,
 ///         <c>User</c> on <c>GET /users/:id</c>, and <c>UserWithAdmin</c> to administrators - so only the
-///         five members the narrowest of them always carries are <c>required</c>. Everything else is
+///         four members the narrowest of them always carries are <c>required</c>. Everything else is
 ///         nullable and simply absent at the narrower widths; that is what lets the same type deserialize
 ///         a note author and an administrator's view of an account. Never make a member here
 ///         <c>required</c>: it would turn every embedding that omits it into a runtime failure.
@@ -44,6 +44,9 @@ public sealed record GitLabUser
     public DateTimeOffset? CreatedAt { get; init; }
 
     public string? Bio { get; init; }
+
+    /// <summary><see cref="Bio" /> rendered to HTML by GitLab.</summary>
+    public string? BioHtml { get; init; }
 
     public string? Location { get; init; }
 

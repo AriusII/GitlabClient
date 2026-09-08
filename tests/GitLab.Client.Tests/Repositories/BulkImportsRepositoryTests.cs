@@ -107,7 +107,7 @@ public sealed class BulkImportsRepositoryTests
 
         BulkImportListOptions options = new()
         {
-            Sort = GitLabBulkImportSort.Asc, Status = GitLabBulkImportStatus.Timeout, PerPage = 50
+            Sort = GitLabBulkImportSort.Asc, Status = GitLabBulkImportStatus.Timeout, Page = 2, PerPage = 50
         };
 
         await foreach (GitLabBulkImport _ in repository.ListAsync(options, TestContext.Current.CancellationToken))
@@ -115,7 +115,7 @@ public sealed class BulkImportsRepositoryTests
             Assert.Fail("The stubbed response is an empty page.");
         }
 
-        Assert.Equal("https://gitlab.example/api/v4/bulk_imports?sort=asc&status=timeout&per_page=50",
+        Assert.Equal("https://gitlab.example/api/v4/bulk_imports?sort=asc&status=timeout&page=2&per_page=50",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
@@ -334,7 +334,7 @@ public sealed class BulkImportsRepositoryTests
         GitLabApiConnection connection = new(httpClient);
         BulkImportsRepository repository = new(connection);
 
-        BulkImportEntityListOptions options = new() { Status = GitLabBulkImportStatus.Failed, PerPage = 20 };
+        BulkImportEntityListOptions options = new() { Status = GitLabBulkImportStatus.Failed, Page = 3, PerPage = 20 };
 
         await foreach (GitLabBulkImportEntity _ in
                        repository.ListEntitiesForImportAsync(1, options, TestContext.Current.CancellationToken))
@@ -342,7 +342,7 @@ public sealed class BulkImportsRepositoryTests
             Assert.Fail("The stubbed response is an empty page.");
         }
 
-        Assert.Equal("https://gitlab.example/api/v4/bulk_imports/1/entities?status=failed&per_page=20",
+        Assert.Equal("https://gitlab.example/api/v4/bulk_imports/1/entities?status=failed&page=3&per_page=20",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
@@ -461,7 +461,7 @@ public sealed class BulkImportsRepositoryTests
 
         OfflineExportListOptions options = new()
         {
-            Sort = GitLabBulkImportSort.Desc, Status = GitLabOfflineExportStatus.Finished, PerPage = 10
+            Sort = GitLabBulkImportSort.Desc, Status = GitLabOfflineExportStatus.Finished, Page = 4, PerPage = 10
         };
 
         List<GitLabOfflineExport> exports = [];
@@ -471,7 +471,7 @@ public sealed class BulkImportsRepositoryTests
             exports.Add(item);
         }
 
-        Assert.Equal("https://gitlab.example/api/v4/offline_exports?sort=desc&status=finished&per_page=10",
+        Assert.Equal("https://gitlab.example/api/v4/offline_exports?sort=desc&status=finished&page=4&per_page=10",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
 
         GitLabOfflineExport export = Assert.Single(exports);

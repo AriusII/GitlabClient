@@ -25,6 +25,9 @@ internal interface IPackagesGenericService
     Task AuthorizeMavenPackageFileUploadAsync(ProjectId projectId, string path, string fileName,
         CancellationToken cancellationToken = default);
 
+    Task UploadMavenPackageFileAsync(ProjectId projectId, string path, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabFileResponse> DownloadGenericPackageFileAsync(ProjectId projectId, string packageName,
         string packageVersion, string fileName, CancellationToken cancellationToken = default);
 

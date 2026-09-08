@@ -13,12 +13,6 @@ namespace GitLab.Client.Abstractions;
 ///         Simple-index endpoints answer with an HTML page (PEP 503's "Simple Repository API" format),
 ///         not JSON, so the caller parses the body as a PyPI client would.
 ///     </para>
-///     <para>
-///         GitLab's <c>GET .../pypi/forward/:package_name/:upstream_path</c> proxy endpoint - which
-///         redirects to an upstream PyPI mirror - is not exposed here: its success response is a bare
-///         <c>302</c> with no body, which this library's transport has no way to hand back without
-///         throwing. See the remarks on the internal repository interface for the full reasoning.
-///     </para>
 /// </summary>
 public interface IPackagesPyPiClient
 {
@@ -66,4 +60,15 @@ public interface IPackagesPyPiClient
     /// <summary>Gets the PEP 503 Simple-index page listing every version of one package in the project.</summary>
     Task<GitLabFileResponse> GetSimplePackageForProjectAsync(ProjectId projectId, string packageName,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Resolves a package file proxied through GitLab's PyPI Dependency Firewall. GitLab does not stream
+    ///     the file itself - it enforces the firewall policy, then answers with a <c>302 Found</c> pointing
+    ///     at the real upstream artifact, which is why this returns a <see cref="GitLabRedirectResponse" />
+    ///     rather than a <see cref="GitLabFileResponse" />. <paramref name="upstreamPath" /> comes verbatim
+    ///     from the link GitLab already rewrote into the Simple-index page - construct it by hand and GitLab
+    ///     will 404, since it is not just the upstream URL's path.
+    /// </summary>
+    Task<GitLabRedirectResponse> ForwardPackageFileAsync(ProjectId projectId, string packageName,
+        string upstreamPath, CancellationToken cancellationToken = default);
 }

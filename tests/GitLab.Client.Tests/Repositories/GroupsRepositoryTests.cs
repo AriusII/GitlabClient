@@ -157,6 +157,34 @@ public sealed class GroupsRepositoryTests
     }
 
     [Fact]
+    public async Task ListAsync_BuildsTheGroupsRoute_AndProjectsEveryFilter()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent($"[{GroupJson}]", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GroupsRepository repository = new(new GitLabApiConnection(httpClient));
+
+        GroupListOptions options = new()
+        {
+            Search = "ops", Visibility = GitLabVisibility.Private, SkipGroups = [21, 22], PerPage = 50
+        };
+
+        List<GitLabGroup> groups = [];
+        await foreach (GitLabGroup group in repository.ListAsync(options, TestContext.Current.CancellationToken))
+        {
+            groups.Add(group);
+        }
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups?search=ops&visibility=private&skip_groups=21,22&per_page=50",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(9970, Assert.Single(groups).Id);
+    }
+
+    [Fact]
     public async Task CreateAsync_PostsToGroups_AndSendsOnlyTheMembersThatWereSet()
     {
         string? sentBody = null;
@@ -854,6 +882,25 @@ public sealed class GroupsRepositoryTests
         Assert.Equal(5, uploaded.Id);
         Assert.Equal("/uploads/66dbcd21ec5d24ed6ea225176098d52b/img.png", uploaded.Url?.OriginalString);
         Assert.Equal("![img](/uploads/66dbcd21ec5d24ed6ea225176098d52b/img.png)", uploaded.Markdown);
+    }
+
+    [Fact]
+    public async Task AuthorizeUploadAsync_PostsToTheAuthorizeRoute_AndIgnoresWorkhorsesBody()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"TempPath":"/var/opt/gitlab/uploads/tmp"}""", Encoding.UTF8,
+                "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GroupsRepository repository = new(new GitLabApiConnection(httpClient));
+
+        await repository.AuthorizeUploadAsync(9970, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/groups/9970/uploads/authorize",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
     [Fact]

@@ -195,6 +195,42 @@ public interface IGitLabApiConnection
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     The <c>PUT</c> sibling of
+    ///     <see cref="PostFileAsync(Uri, GitLabFileUpload, IReadOnlyDictionary{string, string}, CancellationToken)" />,
+    ///     for the multipart upload endpoints GitLab answers with no content at all - publishing a package
+    ///     revision file (Conan, Debian, generic Maven/npm/PyPI package files) or a Terraform module archive,
+    ///     where GitLab's Workhorse layer returns a bare success status with an empty body. The generic
+    ///     <see cref="PutFileAsync{TResponse}" /> overload would fail trying to deserialize that empty body.
+    /// </summary>
+    /// <param name="requestUri">The route to upload to, relative to the configured GitLab instance.</param>
+    /// <param name="file">The file part. Its stream is borrowed, never disposed here.</param>
+    /// <param name="formFields">Simple string fields to send alongside the file, or <see langword="null" />.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="Exceptions.GitLabApiException">GitLab answered with a non-success status code.</exception>
+    Task PutFileAsync(
+        Uri requestUri,
+        GitLabFileUpload file,
+        IReadOnlyDictionary<string, string>? formFields,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Issues a <c>GET</c> whose successful answer is a redirect rather than a body or a status code -
+    ///     the PyPI package-proxy forwarding route is the first of these. A 3xx status is this method's
+    ///     success case and is returned, not thrown; every other non-success status still throws the typed
+    ///     exception exactly as every other verb does. See <see cref="GitLabRedirectResponse" /> for why
+    ///     this needs its own method rather than following the redirect automatically.
+    /// </summary>
+    /// <param name="requestUri">The route to request, relative to the configured GitLab instance.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The status GitLab answered with and, when present, the parsed <c>Location</c> header.</returns>
+    /// <exception cref="Exceptions.GitLabApiException">
+    ///     GitLab answered with a non-success, non-redirect status code.
+    /// </exception>
+    Task<GitLabRedirectResponse> GetRedirectAsync(
+        Uri requestUri,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Issues a <c>HEAD</c> request as an existence check. GitLab exposes these for repository branches
     ///     and files, answering with no body and putting the metadata in <c>X-Gitlab-*</c> headers.
     /// </summary>

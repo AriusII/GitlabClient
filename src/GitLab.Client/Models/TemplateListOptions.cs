@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     License listings filter on popularity as well - see <see cref="LicenseTemplateListOptions" />.
 /// </summary>
 [GitLabQuery]
-public sealed record TemplateListOptions
+public readonly record struct TemplateListOptions
 {
     /// <summary>
     ///     Page size. Pagination itself is automatic - the listings stream every page - so this only

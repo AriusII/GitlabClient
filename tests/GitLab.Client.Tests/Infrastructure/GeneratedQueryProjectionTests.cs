@@ -34,7 +34,7 @@ public sealed class GeneratedQueryProjectionTests
         [nameof(AgentSessionListOptionsQueryExtensions)] =
             "agent_type,status,created_after,created_before,per_page",
         [nameof(AllSnippetListOptionsQueryExtensions)] = "created_after,created_before,repository_storage,per_page",
-        [nameof(BranchListOptionsQueryExtensions)] = "search,regex,sort,page_token,per_page",
+        [nameof(BranchListOptionsQueryExtensions)] = "search,regex,sort,page,page_token,per_page",
         [nameof(CommitListOptionsQueryExtensions)] = "ref_name,since,until,per_page",
         [nameof(GroupBillableMemberListOptionsQueryExtensions)] = "search,sort,per_page",
         [nameof(GroupLabelGetOptionsQueryExtensions)] =
@@ -50,7 +50,7 @@ public sealed class GeneratedQueryProjectionTests
         [nameof(InvitedGroupListOptionsQueryExtensions)] =
             "relation,search,min_access_level,with_custom_attributes,per_page",
         [nameof(IssueListOptionsQueryExtensions)] =
-            "state,labels,not[labels],iids,author_id,updated_after,per_page,with_labels_details,closed_by_id,order_by,sort,due_date,issue_type,milestone,milestone_id,search,in,author_username,assignee_id,assignee_username,created_after,created_before,updated_before,not[milestone],not[milestone_id],not[iids],not[author_id],not[author_username],not[assignee_id],not[assignee_username],not[weight],not[iteration_id],not[iteration_title],scope,my_reaction_emoji,confidential,weight,health_status,iteration_id,iteration_title,non_archived",
+            "state,labels,not[labels],iids,author_id,updated_after,per_page,with_labels_details,closed_by_id,order_by,sort,due_date,issue_type,milestone,milestone_id,search,in,author_username,assignee_id,assignee_username,created_after,created_before,updated_before,not[milestone],not[milestone_id],not[iids],not[author_id],not[author_username],not[assignee_id],not[assignee_username],not[weight],not[iteration_id],not[iteration_title],scope,my_reaction_emoji,confidential,weight,epic_id,health_status,iteration_id,iteration_title,non_archived",
         [nameof(JobArtifactDownloadOptionsQueryExtensions)] = "file_type,job_token",
         [nameof(JobArtifactRefDownloadOptionsQueryExtensions)] = "job_token,search_recent_successful_pipelines",
         [nameof(JobArtifactTreeListOptionsQueryExtensions)] = "path,recursive,job_token,per_page",
@@ -63,7 +63,7 @@ public sealed class GeneratedQueryProjectionTests
         [nameof(MilestoneListOptionsQueryExtensions)] =
             "state,iids,title,search,include_parent_milestones,include_ancestors,updated_before,updated_after,per_page",
         [nameof(PipelineListOptionsQueryExtensions)] =
-            "status,ref,sha,source,updated_after,updated_before,yaml_errors,order_by,sort,per_page",
+            "status,ref,sha,source,name,username,scope,updated_after,updated_before,created_after,created_before,yaml_errors,order_by,sort,per_page",
         [nameof(PipelineScheduleListOptionsQueryExtensions)] = "scope,per_page",
         [nameof(PipelineScheduleRunListOptionsQueryExtensions)] = "scope,status,sort,per_page",
         [nameof(ProjectListOptionsQueryExtensions)] =

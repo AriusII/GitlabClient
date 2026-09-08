@@ -1,3 +1,4 @@
+using GitLab.Client.Abstractions;
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
 
@@ -42,5 +43,13 @@ internal interface IReleasesService
         UpdateReleaseLinkRequest request, CancellationToken cancellationToken = default);
 
     Task DeleteLinkAsync(ProjectId projectId, string tagName, long linkId,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> GetLatestReleaseAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> GetLatestReleaseSuffixPathAsync(ProjectId projectId, string suffixPath,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadReleaseAssetAsync(ProjectId projectId, string tagName, string directAssetPath,
         CancellationToken cancellationToken = default);
 }

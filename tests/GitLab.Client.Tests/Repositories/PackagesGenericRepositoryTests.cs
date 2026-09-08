@@ -136,6 +136,47 @@ public sealed class PackagesGenericRepositoryTests
     }
 
     [Fact]
+    public async Task UploadMavenPackageFileAsync_PutsTheFileToTheMavenRoute_WithNoResponseBody()
+    {
+        MediaTypeHeaderValue? sentContentType = null;
+
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(request =>
+        {
+            sentContentType = request.Content?.Headers.ContentType;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesGenericRepository repository = new(connection);
+
+        using MemoryStream content = new(FileBytes);
+        GitLabFileUpload file = new() { Content = content, FileName = "mypkg-1.0-SNAPSHOT.pom" };
+
+        await repository.UploadMavenPackageFileAsync(42, "foo/bar/mypkg/1.0-SNAPSHOT", "mypkg-1.0-SNAPSHOT.pom",
+            file, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/42/packages/maven/foo%2Fbar%2Fmypkg%2F1.0-SNAPSHOT/"
+            + "mypkg-1.0-SNAPSHOT.pom",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("multipart/form-data", sentContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task UploadMavenPackageFileAsync_ThrowsOnNullFile()
+    {
+        (HttpClient httpClient, _) = CreateClient(_ => new HttpResponseMessage(HttpStatusCode.OK));
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesGenericRepository repository = new(connection);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            repository.UploadMavenPackageFileAsync(42, "foo/bar/mypkg/1.0-SNAPSHOT", "mypkg-1.0-SNAPSHOT.pom",
+                null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task DownloadGenericPackageFileAsync_BuildsTheRoute()
     {
         (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>

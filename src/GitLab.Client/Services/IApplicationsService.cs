@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using GitLab.Client.Models;
 
 namespace GitLab.Client.Services;
@@ -31,4 +33,6 @@ internal interface IApplicationsService
         CancellationToken cancellationToken = default);
 
     Task DeleteForCurrentUserAsync(long id, CancellationToken cancellationToken = default);
+
+    Task<JsonElement> GetWorkspacesHttpServerConfigAsync(CancellationToken cancellationToken = default);
 }

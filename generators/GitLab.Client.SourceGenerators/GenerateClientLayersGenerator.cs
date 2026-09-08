@@ -251,10 +251,10 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
 
         LayerModel service = CreateLayerModel(
             resourceName + ClientLayerNaming.ServiceSuffix, serviceNamespace,
-            serviceInterface, repositoryInterface, diagnostics, location, cancellationToken);
+            serviceInterface, repositoryInterface, repositoryInterface, diagnostics, location, cancellationToken);
         LayerModel controller = CreateLayerModel(
             resourceName + ClientLayerNaming.ControllerSuffix, controllerNamespace,
-            clientInterface, serviceInterface, diagnostics, location, cancellationToken);
+            clientInterface, serviceInterface, repositoryInterface, diagnostics, location, cancellationToken);
 
         return new ClientLayersModel(
             resourceName,
@@ -272,6 +272,7 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
         string namespaceName,
         INamedTypeSymbol implementedInterface,
         INamedTypeSymbol dependencyInterface,
+        INamedTypeSymbol documentationSourceInterface,
         List<DiagnosticInfo> diagnostics,
         LocationInfo? location,
         CancellationToken cancellationToken)
@@ -290,18 +291,27 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
                 implementedInterface.ToDisplayString(), className));
         }
 
+        // Always the Repository interface, for BOTH the Service and the Controller layer: the Repository
+        // is the resource's one hand-authored source of truth (CLAUDE.md), so a doc comment written there
+        // reaches a consumer calling through the generated Controller exactly as it reaches one calling
+        // the Service directly, rather than depending on which layer happens to restate it.
+        Dictionary<string, ISymbol> documentationSource =
+            ClientLayerSymbolReader.BuildSignatureMap(documentationSourceInterface, cancellationToken);
+
         List<MethodModel> methodModels = new();
 
         foreach (IMethodSymbol method in methods)
         {
-            methodModels.Add(ClientLayerSymbolReader.CreateMethodModel(method, diagnostics, location));
+            methodModels.Add(ClientLayerSymbolReader.CreateMethodModel(method, diagnostics, location,
+                documentationSource, cancellationToken));
         }
 
         List<PropertyModel> propertyModels = new();
 
         foreach (IPropertySymbol property in properties)
         {
-            propertyModels.Add(ClientLayerSymbolReader.CreatePropertyModel(property));
+            propertyModels.Add(
+                ClientLayerSymbolReader.CreatePropertyModel(property, documentationSource, cancellationToken));
         }
 
         return new LayerModel(
@@ -407,9 +417,16 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
         // suppress core compiler warnings, and TreatWarningsAsErrors makes those a build break on a file
         // nobody can edit. CS9113: the dependency parameter is unread when the interface declares no
         // members (GLC0007 says so on the interface itself). CS0612/CS0618: a resource area may
-        // legitimately be [Obsolete] under the deprecation policy in CLAUDE.md.
+        // legitimately be [Obsolete] under the deprecation policy in CLAUDE.md. CS1574: a doc comment
+        // copied verbatim from the Repository interface (see AppendDocComment) can carry a <see cref=".."/>
+        // that only resolves in the ORIGINAL file's using-directive scope - this file emits every type
+        // fully qualified and has no usings at all, by design, so the same cref that is perfectly valid on
+        // the Repository member cannot re-resolve here. Rewriting each cref to its fully-qualified form
+        // would require re-parsing and re-binding the doc's XML, which is exactly what "copy verbatim"
+        // means not to do; suppressing the one diagnostic that follows is the safe trade.
         builder.AppendLine("#pragma warning disable CS9113");
         builder.AppendLine("#pragma warning disable CS0612, CS0618");
+        builder.AppendLine("#pragma warning disable CS1574");
         builder.AppendLine();
         builder.Append("namespace ").AppendLine(model.NamespaceName);
         builder.AppendLine("{");
@@ -439,6 +456,7 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
         builder.AppendLine("    }");
         builder.AppendLine("}");
         builder.AppendLine();
+        builder.AppendLine("#pragma warning restore CS1574");
         builder.AppendLine("#pragma warning restore CS0612, CS0618");
         builder.AppendLine("#pragma warning restore CS9113");
         return builder.ToString();
@@ -454,8 +472,26 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
         first = false;
     }
 
+    /// <summary>
+    ///     Re-indents the Repository member's captured doc-comment lines (see
+    ///     <see cref="ClientLayerSymbolReader" />'s doc-extraction) onto the forwarder at the target file's
+    ///     8-space member indentation, immediately before its signature. Each line already carries
+    ///     everything after the original "///" marker verbatim, so this only ever adds the marker and the
+    ///     indentation back - it never reformats the comment's own content. A method or property with no
+    ///     doc comment on its Repository counterpart has an empty <c>DocCommentLines</c> and this appends
+    ///     nothing at all, which is exactly today's (undocumented) output.
+    /// </summary>
+    private static void AppendDocComment(StringBuilder builder, EquatableArray<string> lines)
+    {
+        foreach (string line in lines)
+        {
+            builder.Append("        ///").Append(line).AppendLine();
+        }
+    }
+
     private static void AppendProperty(StringBuilder builder, PropertyModel property)
     {
+        AppendDocComment(builder, property.DocCommentLines);
         builder.Append("        public ").Append(property.Type).Append(' ').Append(property.Name);
 
         if (property.HasGetter && !property.HasSetter)
@@ -482,6 +518,7 @@ public sealed class GenerateClientLayersGenerator : IIncrementalGenerator
 
     private static void AppendMethod(StringBuilder builder, MethodModel method)
     {
+        AppendDocComment(builder, method.DocCommentLines);
         builder.Append("        ").Append(method.ReturnAttributes).Append("public ").Append(method.ReturnType)
             .Append(' ').Append(method.Name).Append(method.TypeParameterList).Append('(');
 

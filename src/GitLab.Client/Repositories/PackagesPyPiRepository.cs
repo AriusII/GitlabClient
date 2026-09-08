@@ -88,6 +88,15 @@ internal sealed class PackagesPyPiRepository(IGitLabApiConnection connection) : 
             cancellationToken);
     }
 
+    public Task<GitLabRedirectResponse> ForwardPackageFileAsync(ProjectId projectId, string packageName,
+        string upstreamPath, CancellationToken cancellationToken = default)
+    {
+        return connection.GetRedirectAsync(
+            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal("packages").Literal("pypi")
+                .Literal("forward").Escaped(packageName).Escaped(upstreamPath).Build(),
+            cancellationToken);
+    }
+
     private static Dictionary<string, string> BuildFormFields(PyPiPackageUploadRequest metadata)
     {
         Dictionary<string, string> formFields = new(StringComparer.Ordinal) { ["name"] = metadata.Name };

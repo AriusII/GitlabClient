@@ -1,3 +1,4 @@
+using GitLab.Client.Abstractions;
 using GitLab.Client.Domain;
 
 namespace GitLab.Client.Services;
@@ -12,4 +13,10 @@ namespace GitLab.Client.Services;
 internal interface IDependencyProxyService
 {
     Task PurgeCacheAsync(GroupId groupId, CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadMavenPackageFileAsync(ProjectId projectId, string path, string fileName,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadNpmPackageTarballAsync(ProjectId projectId, string packageName, string fileName,
+        CancellationToken cancellationToken = default);
 }

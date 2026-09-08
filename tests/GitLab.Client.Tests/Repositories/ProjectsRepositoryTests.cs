@@ -55,6 +55,39 @@ public sealed class ProjectsRepositoryTests
         Assert.Equal("404 Project Not Found", exception.Message);
     }
 
+    [Fact]
+    public async Task ListAsync_ProjectsTheListFilters_AndDeserializesTheProject()
+    {
+        using Harness harness = new(HttpStatusCode.OK, $"[{ProjectJson}]");
+
+        ProjectListOptions options = new()
+        {
+            Search = "gitlab",
+            Visibility = GitLabVisibility.Public,
+            Archived = false,
+            OrderBy = "last_activity_at",
+            Sort = "desc",
+            Owned = true,
+            PerPage = 20
+        };
+
+        List<GitLabProject> projects = [];
+        await foreach (GitLabProject project in harness.Repository.ListAsync(options,
+                           TestContext.Current.CancellationToken))
+        {
+            projects.Add(project);
+        }
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects?search=gitlab&visibility=public&archived=false"
+            + "&per_page=20&order_by=last_activity_at&sort=desc&owned=true",
+            harness.RequestUri);
+
+        GitLabProject project2 = Assert.Single(projects);
+        Assert.Equal(278964, project2.Id);
+        Assert.Equal("gitlab-org/gitlab", project2.PathWithNamespace);
+    }
+
     /// <summary>
     ///     The create body carries ~90 fields whose wire names come from the context's snake_case policy
     ///     rather than from a per-property attribute, so one exact-payload assertion is what keeps a

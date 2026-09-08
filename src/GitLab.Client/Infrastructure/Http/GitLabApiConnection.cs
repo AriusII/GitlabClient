@@ -118,10 +118,8 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         // ResponseContentRead, which copies the whole response body into an intermediate MemoryStream before
         // the deserializer can see it. HttpRequestMessage.Dispose disposes its Content, so the request body
         // needs no separate `using`.
-        using HttpRequestMessage message = new(HttpMethod.Post, requestUri)
-        {
-            Content = JsonContent.Create(request, requestTypeInfo)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Post, requestUri);
+        message.Content = JsonContent.Create(request, requestTypeInfo);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -176,10 +174,8 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         HttpClient httpClient = CreateClient();
         using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
 
-        using HttpRequestMessage message = new(HttpMethod.Put, requestUri)
-        {
-            Content = JsonContent.Create(request, requestTypeInfo)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Put, requestUri);
+        message.Content = JsonContent.Create(request, requestTypeInfo);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -200,10 +196,8 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         HttpClient httpClient = CreateClient();
         using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
 
-        using HttpRequestMessage message = new(HttpMethod.Post, requestUri)
-        {
-            Content = JsonContent.Create(request, requestTypeInfo)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Post, requestUri);
+        message.Content = JsonContent.Create(request, requestTypeInfo);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -233,10 +227,8 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         HttpClient httpClient = CreateClient();
         using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
 
-        using HttpRequestMessage message = new(HttpMethod.Put, requestUri)
-        {
-            Content = JsonContent.Create(request, requestTypeInfo)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Put, requestUri);
+        message.Content = JsonContent.Create(request, requestTypeInfo);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -379,19 +371,84 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         ArgumentNullException.ThrowIfNull(file);
 
         HttpClient httpClient = CreateClient();
-        using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
+
+        // Unlike every other verb, an upload's slow, size-dependent phase is the SEND, which happens INSIDE
+        // this SendAsync call rather than after it returns - the mirror image of GetFileAsync's post-header
+        // download, which happens after its SendAsync call returns. That is exactly why GetFileAsync's trick
+        // of standing its own CancelAfter down does not transfer here as-is: HttpClient enforces its Timeout
+        // by wrapping whatever token SendAsync is given in one more linked source and arming that source's
+        // own CancelAfter(Timeout) internally (see the exception's "canceled due to the configured
+        // HttpClient.Timeout" wording, which only HttpClient's own wrapper produces) - so a fixed budget still
+        // bounds the send even when our own token carries none. CreateClient() hands back a fresh, not-yet-
+        // used HttpClient per call (see CreateClient's own remarks), so disarming that budget on THIS instance
+        // - rather than the token we pass it - is what actually frees the send from it, the same way
+        // GetFileAsync frees the body read. The linked operation token still carries the caller's own
+        // cancellation.
+        httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        using CancellationTokenSource operation = CreateUnboundedOperation(cancellationToken);
 
         // As in SendFileAsync: the request message owns the multipart content and disposes every part with
         // itself, which is why the file part is a BorrowedStreamContent and the caller's stream survives.
-        using HttpRequestMessage message = new(HttpMethod.Post, requestUri)
-        {
-            Content = BuildMultipartContent(file, formFields)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Post, requestUri);
+        message.Content = BuildMultipartContent(file, formFields);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
             .ConfigureAwait(false);
         await EnsureSuccessAsync(response, HttpMethod.Post, requestUri, operation.Token).ConfigureAwait(false);
+    }
+
+    public async Task PutFileAsync(
+        Uri requestUri,
+        GitLabFileUpload file,
+        IReadOnlyDictionary<string, string>? formFields,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        HttpClient httpClient = CreateClient();
+
+        // See PostFileAsync above: the send, not a post-header receive, is this upload's payload-size-
+        // dependent phase, and it happens inside this SendAsync call - the one span HttpClient always times
+        // out itself regardless of the token it is given. Disarming Timeout on this call's own fresh
+        // HttpClient instance is what actually frees the send from that fixed budget; the operation token
+        // still carries the caller's own cancellation.
+        httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        using CancellationTokenSource operation = CreateUnboundedOperation(cancellationToken);
+
+        // As in SendFileAsync: the request message owns the multipart content and disposes every part with
+        // itself, which is why the file part is a BorrowedStreamContent and the caller's stream survives.
+        using HttpRequestMessage message = new(HttpMethod.Put, requestUri);
+        message.Content = BuildMultipartContent(file, formFields);
+
+        using HttpResponseMessage response = await httpClient
+            .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(response, HttpMethod.Put, requestUri, operation.Token).ConfigureAwait(false);
+    }
+
+    public async Task<GitLabRedirectResponse> GetRedirectAsync(Uri requestUri,
+        CancellationToken cancellationToken = default)
+    {
+        HttpClient httpClient = CreateClient();
+        using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
+
+        using HttpRequestMessage message = new(HttpMethod.Get, requestUri);
+
+        using HttpResponseMessage response = await httpClient
+            .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
+            .ConfigureAwait(false);
+
+        // A 3xx is the ANSWER on this route, not a failure - GitLab hides the real package location behind
+        // a redirect instead of streaming it. Every other non-success status still maps to its typed
+        // exception, exactly as HeadAsync does the equivalent carve-out for 404.
+        bool isRedirect = (int)response.StatusCode is >= 300 and < 400;
+        if (!isRedirect)
+        {
+            await EnsureSuccessAsync(response, HttpMethod.Get, requestUri, operation.Token).ConfigureAwait(false);
+        }
+
+        return GitLabRedirectResponse.FromResponse(response);
     }
 
     public async Task<GitLabHeadResponse> HeadAsync(Uri requestUri, CancellationToken cancellationToken = default)
@@ -426,10 +483,8 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         HttpClient httpClient = CreateClient();
         using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
 
-        using HttpRequestMessage message = new(HttpMethod.Patch, requestUri)
-        {
-            Content = JsonContent.Create(request, requestTypeInfo)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Patch, requestUri);
+        message.Content = JsonContent.Create(request, requestTypeInfo);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -450,10 +505,8 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         HttpClient httpClient = CreateClient();
         using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
 
-        using HttpRequestMessage message = new(HttpMethod.Patch, requestUri)
-        {
-            Content = JsonContent.Create(request, requestTypeInfo)
-        };
+        using HttpRequestMessage message = new(HttpMethod.Patch, requestUri);
+        message.Content = JsonContent.Create(request, requestTypeInfo);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -485,14 +538,19 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         ArgumentNullException.ThrowIfNull(file);
 
         HttpClient httpClient = CreateClient();
-        using CancellationTokenSource operation = CreateOperationTimeout(httpClient, cancellationToken);
+
+        // See PostFileAsync/PutFileAsync above: sending the (potentially large) multipart body is this
+        // upload's payload-size-dependent phase, and it happens inside this SendAsync call, which HttpClient
+        // always times out itself off its own Timeout regardless of the token it is given. Disarming Timeout
+        // on this call's own fresh HttpClient instance is what actually frees the send from that fixed
+        // budget - only the caller's own token can abort this call from here on.
+        httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        using CancellationTokenSource operation = CreateUnboundedOperation(cancellationToken);
 
         // HttpRequestMessage.Dispose disposes its Content, which disposes every part of the multipart body -
         // hence BorrowedStreamContent for the file itself, so the caller's stream survives the call.
-        using HttpRequestMessage message = new(method, requestUri)
-        {
-            Content = BuildMultipartContent(file, formFields)
-        };
+        using HttpRequestMessage message = new(method, requestUri);
+        message.Content = BuildMultipartContent(file, formFields);
 
         using HttpResponseMessage response = await httpClient
             .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, operation.Token)
@@ -569,6 +627,29 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
         return source;
     }
 
+    /// <summary>
+    ///     The upload-side counterpart of <see cref="GetFileAsync" /> standing its countdown down once headers
+    ///     arrive: there, the caller-paced phase is the download, which happens after that method's own
+    ///     <c>SendAsync</c> call returns, so lifting the self-imposed budget on the token passed to the
+    ///     subsequent body read is enough. Here the caller-paced, payload-size-dependent phase is the send
+    ///     itself, which happens INSIDE the <c>SendAsync</c> call - and <see cref="HttpClient" /> arms its own
+    ///     <see cref="HttpClient.Timeout" />-based cancellation for that whole call by wrapping whatever token
+    ///     it is given, regardless of what that token does or does not do. So unlike the download side, this
+    ///     source alone cannot exempt the send from the fixed budget; each upload call site also sets its own
+    ///     freshly obtained <see cref="HttpClient" />'s <see cref="HttpClient.Timeout" /> to
+    ///     <see cref="Timeout.InfiniteTimeSpan" /> before calling this. What this source still does is exactly
+    ///     what <see cref="CreateOperationTimeout" /> does for every JSON call: link to the caller's own token,
+    ///     so their cancellation still aborts the call - just without also re-applying a fixed budget on top.
+    ///     Used by <see cref="SendFileAsync{TResponse}" /> and the non-generic
+    ///     <see cref="PostFileAsync(Uri,GitLabFileUpload,IReadOnlyDictionary{string,string}?,CancellationToken)" />
+    ///     / <see cref="PutFileAsync(Uri,GitLabFileUpload,IReadOnlyDictionary{string,string}?,CancellationToken)" />
+    ///     overloads.
+    /// </summary>
+    private static CancellationTokenSource CreateUnboundedOperation(CancellationToken cancellationToken)
+    {
+        return CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    }
+
     private static async Task<TResponse> ReadBodyAsync<TResponse>(
         HttpResponseMessage response,
         JsonTypeInfo<TResponse> responseTypeInfo,
@@ -620,17 +701,14 @@ internal sealed class GitLabApiConnection : IGitLabApiConnection
     {
         Uri candidate = new(nextPageUrl, UriKind.RelativeOrAbsolute);
 
-        if (candidate.IsAbsoluteUri
-            && baseAddress is not null
-            && Uri.Compare(candidate, baseAddress, UriComponents.SchemeAndServer, UriFormat.UriEscaped,
-                StringComparison.OrdinalIgnoreCase) != 0)
-        {
-            throw new GitLabApiException(
+        return candidate.IsAbsoluteUri
+               && baseAddress is not null
+               && Uri.Compare(candidate, baseAddress, UriComponents.SchemeAndServer, UriFormat.UriEscaped,
+                   StringComparison.OrdinalIgnoreCase) != 0
+            ? throw new GitLabApiException(
                 $"The pagination Link header pointed at '{candidate.GetLeftPart(UriPartial.Authority)}', which is " +
-                $"not the configured GitLab instance '{baseAddress.GetLeftPart(UriPartial.Authority)}'.");
-        }
-
-        return candidate;
+                $"not the configured GitLab instance '{baseAddress.GetLeftPart(UriPartial.Authority)}'.")
+            : candidate;
     }
 
     /// <summary>

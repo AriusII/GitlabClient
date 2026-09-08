@@ -141,4 +141,27 @@ public sealed class PackagesCargoRepositoryTests
         await response.Content.CopyToAsync(copy, TestContext.Current.CancellationToken);
         Assert.Equal(CrateBytes, copy.ToArray());
     }
+
+    [Fact]
+    public async Task DownloadCrateAsync_EscapesAPlusBearingSemverBuildMetadataVersion()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(CrateBytes)
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesCargoRepository repository = new(connection);
+
+        // Cargo/semver versions legally carry build metadata after a '+' (e.g. "1.2.3+build.4"), which is
+        // not in Uri.EscapeDataString's unreserved set - proof that the version segment went through
+        // .Escaped(...), not .Literal(...).
+        using GitLabFileResponse response = await repository.DownloadCrateAsync(7, "my-crate", "1.2.3+build.4",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://gitlab.example/api/v4/projects/7/packages/cargo/my-crate/1.2.3%2Bbuild.4/download",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }

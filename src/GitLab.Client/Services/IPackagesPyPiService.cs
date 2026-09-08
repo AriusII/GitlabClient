@@ -35,4 +35,7 @@ internal interface IPackagesPyPiService
 
     Task<GitLabFileResponse> GetSimplePackageForProjectAsync(ProjectId projectId, string packageName,
         CancellationToken cancellationToken = default);
+
+    Task<GitLabRedirectResponse> ForwardPackageFileAsync(ProjectId projectId, string packageName,
+        string upstreamPath, CancellationToken cancellationToken = default);
 }

@@ -64,7 +64,10 @@ internal sealed class ExperimentsRepository(IGitLabApiConnection connection) : I
         {
             foreach ((string key, string value) in context)
             {
-                builder.Query($"context[{key}]", value);
+                // The key is caller-supplied free text too - GitLabRouteBuilder.Query only escapes the
+                // value, so an unescaped key could otherwise break the query string or smuggle in an
+                // extra parameter.
+                builder.Query($"context[{Uri.EscapeDataString(key)}]", value);
             }
         }
 

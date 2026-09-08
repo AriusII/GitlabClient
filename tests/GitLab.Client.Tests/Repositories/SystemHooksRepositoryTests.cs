@@ -192,6 +192,38 @@ public sealed class SystemHooksRepositoryTests
     }
 
     [Fact]
+    public async Task DeleteUrlVariableAsync_SendsDeleteToTheUrlVariableRoute_EscapingTheKey()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SystemHooksRepository repository = new(connection);
+
+        await repository.DeleteUrlVariableAsync(3, "audit/token", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/hooks/3/url_variables/audit%2Ftoken",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task DeleteCustomHeaderAsync_SendsDeleteToTheCustomHeaderRoute_EscapingTheKey()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        SystemHooksRepository repository = new(connection);
+
+        await repository.DeleteCustomHeaderAsync(3, "X-Audit", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/hooks/3/custom_headers/X-Audit",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task UpdateUrlVariableAsync_PutsToTheUrlVariableRoute_EscapingTheKey_WithNoResponseBody()
     {
         string? sentBody = null;

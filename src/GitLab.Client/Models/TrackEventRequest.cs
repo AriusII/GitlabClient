@@ -11,10 +11,21 @@ public sealed record TrackEventRequest
     /// <summary>The event's registered name, e.g. <c>i_code_review_merge_request_widget_view</c>.</summary>
     public required string Event { get; init; }
 
+    /// <summary>The namespace to attribute the event to.</summary>
     public long? NamespaceId { get; init; }
 
+    /// <summary>
+    ///     The numeric project id to attribute the event to. Mutually exclusive with <see cref="ProjectPath" />.
+    ///     GitLab models these as two separate wire fields rather than one dual-shaped identifier, so this is a
+    ///     plain <see cref="long" /> rather than <see cref="Domain.ProjectId" /> - the domain type would collapse
+    ///     the two back into a single value and lose the distinction the API relies on.
+    /// </summary>
     public long? ProjectId { get; init; }
 
+    /// <summary>
+    ///     The project path used to resolve the project if <see cref="ProjectId" /> is not given. Mutually exclusive with
+    ///     it.
+    /// </summary>
     public string? ProjectPath { get; init; }
 
     /// <summary>

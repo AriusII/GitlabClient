@@ -37,12 +37,53 @@ internal sealed class GitLabRouteBuilder
     /// <summary>Equivalent to the "O" specifier for <see cref="DateOnly" />, spelled out so it cannot drift.</summary>
     private const string DateQueryFormat = "yyyy'-'MM'-'dd";
 
+    /// <summary>
+    ///     A per-thread reusable buffer. A <see cref="GitLabRouteBuilder" /> is always short-lived and
+    ///     single-use — constructed, chained fluently, <see cref="Build" /> called once, then discarded —
+    ///     so one cached <see cref="StringBuilder" /> per thread is enough to remove the per-call
+    ///     allocation from <see cref="Create" />, which runs once for every API call made through the
+    ///     library. Lazily created on first use per thread; never shared across threads.
+    /// </summary>
+    [ThreadStatic]
+    private static StringBuilder? t_cachedPath;
+
+    /// <summary>
+    ///     Guards <see cref="t_cachedPath" /> against reentrant use on the same thread — for example a
+    ///     route helper invoked (directly or indirectly) while building the arguments of another route
+    ///     still under construction. When set, <see cref="Create" /> falls back to a fresh
+    ///     <see cref="StringBuilder" /> for that nested instance instead of corrupting the outer one.
+    /// </summary>
+    [ThreadStatic]
+    private static bool t_cachedPathInUse;
+
     private readonly StringBuilder _path;
+    private readonly bool _ownsCachedPath;
     private bool _hasQuery;
 
     private GitLabRouteBuilder(string root)
     {
-        _path = new StringBuilder(root, 64);
+        if (t_cachedPathInUse)
+        {
+            _path = new StringBuilder(root, 64);
+            _ownsCachedPath = false;
+            return;
+        }
+
+        StringBuilder? cached = t_cachedPath;
+        if (cached is null)
+        {
+            cached = new StringBuilder(64);
+            t_cachedPath = cached;
+        }
+        else
+        {
+            cached.Clear();
+        }
+
+        cached.Append(root);
+        t_cachedPathInUse = true;
+        _path = cached;
+        _ownsCachedPath = true;
     }
 
     public static GitLabRouteBuilder Create(string root)
@@ -75,6 +116,34 @@ internal sealed class GitLabRouteBuilder
         return this;
     }
 
+    /// <summary>
+    ///     Appends one path segment built from a literal template with one or more caller-supplied values
+    ///     substituted into it - for the rare route where GitLab packs more than one dynamic value into a
+    ///     single "/"-delimited segment instead of chaining separate ones, such as NuGet v2's OData key
+    ///     predicate <c>Packages(Id='{package_name}',Version='{package_version}')</c>. Every value is
+    ///     percent-encoded independently before substitution, never the composed whole - escaping the
+    ///     finished string would also encode the template's own literal characters (the parentheses, the
+    ///     quotes), and not escaping the values at all would let one containing <c>/</c> or <c>'</c> break
+    ///     out of its slot. <paramref name="template" /> is always a compile-time literal, never
+    ///     caller-supplied text - it plays the same role <see cref="Literal" />'s argument does, just with
+    ///     placeholders spliced in.
+    /// </summary>
+    public GitLabRouteBuilder EscapedTemplate(string template, params string[] values)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(template);
+        ArgumentNullException.ThrowIfNull(values);
+
+        object[] escaped = new object[values.Length];
+        for (int index = 0; index < values.Length; index++)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(values[index]);
+            escaped[index] = Uri.EscapeDataString(values[index]);
+        }
+
+        _path.Append('/').AppendFormat(CultureInfo.InvariantCulture, template, escaped);
+        return this;
+    }
+
     public GitLabRouteBuilder Segment(ProjectId projectId)
     {
         _path.Append('/').Append(projectId.ToRouteValue());
@@ -89,7 +158,7 @@ internal sealed class GitLabRouteBuilder
 
     public GitLabRouteBuilder Segment(long id)
     {
-        _path.Append('/').Append(id.ToString(CultureInfo.InvariantCulture));
+        _path.Append('/').Append(id);
         return this;
     }
 
@@ -107,7 +176,7 @@ internal sealed class GitLabRouteBuilder
     {
         if (value is { } notNull)
         {
-            AppendQuerySeparator().Append(name).Append('=').Append(notNull.ToString(CultureInfo.InvariantCulture));
+            AppendQuerySeparator().Append(name).Append('=').Append(notNull);
         }
 
         return this;
@@ -117,7 +186,7 @@ internal sealed class GitLabRouteBuilder
     {
         if (value is { } notNull)
         {
-            AppendQuerySeparator().Append(name).Append('=').Append(notNull.ToString(CultureInfo.InvariantCulture));
+            AppendQuerySeparator().Append(name).Append('=').Append(notNull);
         }
 
         return this;
@@ -212,7 +281,7 @@ internal sealed class GitLabRouteBuilder
                 _path.Append(MultiValueSeparator);
             }
 
-            _path.Append(values[index].ToString(CultureInfo.InvariantCulture));
+            _path.Append(values[index]);
         }
 
         return this;
@@ -252,8 +321,7 @@ internal sealed class GitLabRouteBuilder
 
         for (int index = 0; index < values.Count; index++)
         {
-            AppendQuerySeparator().Append(name).Append("[]=")
-                .Append(values[index].ToString(CultureInfo.InvariantCulture));
+            AppendQuerySeparator().Append(name).Append("[]=").Append(values[index]);
         }
 
         return this;
@@ -261,7 +329,15 @@ internal sealed class GitLabRouteBuilder
 
     public Uri Build()
     {
-        return new Uri(_path.ToString(), UriKind.Relative);
+        Uri route = new(_path.ToString(), UriKind.Relative);
+
+        if (_ownsCachedPath)
+        {
+            _path.Clear();
+            t_cachedPathInUse = false;
+        }
+
+        return route;
     }
 
     private StringBuilder AppendQuerySeparator()

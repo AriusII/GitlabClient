@@ -945,6 +945,7 @@ namespace GitLab.Client.Infrastructure.Serialization;
 [JsonSerializable(typeof(UpdateApplicationRequest))]
 // Instance (appearance, application settings, statistics, metadata, plan limits).
 [JsonSerializable(typeof(GitLabAppearance))]
+[JsonSerializable(typeof(UpdateApplicationAppearanceRequest))]
 [JsonSerializable(typeof(GitLabApplicationSettings))]
 [JsonSerializable(typeof(UpdateApplicationSettingsRequest))]
 [JsonSerializable(typeof(GitLabBranchProtectionDefaults))]
@@ -974,4 +975,108 @@ namespace GitLab.Client.Infrastructure.Serialization;
 [JsonSerializable(typeof(CreateOrganizationRequest))]
 [JsonSerializable(typeof(GitLabGroupAuditEvent))]
 [JsonSerializable(typeof(UpdateGroupSecuritySettingsRequest))]
+// Container registry repositories and tags (/projects/:id/registry/repositories,
+// /groups/:id/registry/repositories, /registry/repositories/:id and their tag sub-routes).
+[JsonSerializable(typeof(GitLabRegistryRepository))]
+[JsonSerializable(typeof(GitLabRegistryRepository[]))]
+[JsonSerializable(typeof(GitLabRegistryRepositoryTag))]
+[JsonSerializable(typeof(GitLabRegistryRepositoryTag[]))]
+[JsonSerializable(typeof(GitLabRegistryRepositoryTagDetails))]
+// Group/project hook custom-header and URL-variable updates. Alert management reuses the existing
+// GitLabMetricImage / UpdateMetricImageRequest / GitLabMetricImageArray registrations already added
+// for the Issues (incident) metric-images endpoints - same wire entity, no new entry needed.
+[JsonSerializable(typeof(UpdateGroupHookCustomHeaderRequest))]
+[JsonSerializable(typeof(UpdateGroupHookUrlVariableRequest))]
+[JsonSerializable(typeof(UpdateProjectHookCustomHeaderRequest))]
+[JsonSerializable(typeof(UpdateProjectHookUrlVariableRequest))]
+// Jobs: the runner protocol (POST /jobs/request, PUT /jobs/:id, the bare /jobs/:id/artifacts and
+// /jobs/:id/trace routes). JsonElement is already registered above for JobRequestRequest's dynamic
+// response and its own Info/Session/Output members - reused, not registered a second time here.
+[JsonSerializable(typeof(JobRequestRequest))]
+[JsonSerializable(typeof(UpdateJobStateRequest))]
+[JsonSerializable(typeof(AuthorizeJobArtifactsUploadRequest))]
+[JsonSerializable(typeof(AppendJobTraceRequest))]
+// ML Model Registry package files (/projects/:id/packages/ml_models/...). GitLabPackageFileStatus is
+// reused from the Packages resource rather than duplicated.
+[JsonSerializable(typeof(AuthorizeMlModelPackageFileUploadRequest))]
+// Project mirrors (/projects/:id/mirror/pull) - a project's single pull-mirror configuration.
+[JsonSerializable(typeof(GitLabPullMirror))]
+[JsonSerializable(typeof(TriggerPullMirrorRequest))]
+[JsonSerializable(typeof(PullMirrorPullRequest))]
+[JsonSerializable(typeof(PullMirrorPullRequestRef))]
+[JsonSerializable(typeof(PullMirrorPullRequestRepo))]
+[JsonSerializable(typeof(UpdatePullMirrorRequest))]
+// Integrations, part B: typed per-slug setters over PUT /projects/:id/integrations/:slug for
+// Confluence, the Custom Issue Tracker, Datadog, Diffblue Cover, Discord, Drone CI, Emails on Push,
+// IBM EWM, the External Wiki, GitGuardian, GitHub and the GitLab for Slack app.
+[JsonSerializable(typeof(ConfluenceIntegrationRequest))]
+[JsonSerializable(typeof(CustomIssueTrackerIntegrationRequest))]
+[JsonSerializable(typeof(DatadogIntegrationRequest))]
+[JsonSerializable(typeof(DiffblueCoverIntegrationRequest))]
+[JsonSerializable(typeof(DiscordIntegrationRequest))]
+[JsonSerializable(typeof(DroneCiIntegrationRequest))]
+[JsonSerializable(typeof(EmailsOnPushIntegrationRequest))]
+[JsonSerializable(typeof(EwmIntegrationRequest))]
+[JsonSerializable(typeof(ExternalWikiIntegrationRequest))]
+[JsonSerializable(typeof(GitGuardianIntegrationRequest))]
+[JsonSerializable(typeof(GitHubIntegrationRequest))]
+[JsonSerializable(typeof(GitLabSlackApplicationIntegrationRequest))]
+// Integrations, part C: the typed per-slug settings records PUT to /projects/:id/integrations/:slug.
+[JsonSerializable(typeof(GoogleCloudPlatformArtifactRegistryIntegrationSettings))]
+[JsonSerializable(typeof(GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings))]
+[JsonSerializable(typeof(GooglePlayIntegrationSettings))]
+[JsonSerializable(typeof(HangoutsChatIntegrationSettings))]
+[JsonSerializable(typeof(HarborIntegrationSettings))]
+[JsonSerializable(typeof(IrkerIntegrationSettings))]
+[JsonSerializable(typeof(JenkinsIntegrationSettings))]
+[JsonSerializable(typeof(JiraIntegrationSettings))]
+[JsonSerializable(typeof(JiraCloudAppIntegrationSettings))]
+[JsonSerializable(typeof(LinearIntegrationSettings))]
+[JsonSerializable(typeof(MatrixIntegrationSettings))]
+[JsonSerializable(typeof(MattermostIntegrationSettings))]
+// Integrations, part E: typed settings for the /projects/:id/services/... alias (Squash TM, TeamCity,
+// Telegram, Unify Circuit, Webex Teams, YouTrack, ZenTao). Response shape is the existing
+// GitLabIntegration, already registered above.
+[JsonSerializable(typeof(SquashTmSettingsRequest))]
+[JsonSerializable(typeof(TeamCitySettingsRequest))]
+[JsonSerializable(typeof(TelegramSettingsRequest))]
+[JsonSerializable(typeof(UnifyCircuitSettingsRequest))]
+[JsonSerializable(typeof(WebexTeamsSettingsRequest))]
+[JsonSerializable(typeof(YouTrackSettingsRequest))]
+[JsonSerializable(typeof(ZentaoSettingsRequest))]
+// Project package protection rules, container repository protection rules, and container registry
+// protection tag rules.
+[JsonSerializable(typeof(GitLabPackageProtectionRule))]
+[JsonSerializable(typeof(GitLabPackageProtectionRule[]))]
+[JsonSerializable(typeof(CreatePackageProtectionRuleRequest))]
+[JsonSerializable(typeof(UpdatePackageProtectionRuleRequest))]
+[JsonSerializable(typeof(GitLabContainerRegistryProtectionRule))]
+[JsonSerializable(typeof(GitLabContainerRegistryProtectionRule[]))]
+[JsonSerializable(typeof(CreateContainerRegistryProtectionRuleRequest))]
+[JsonSerializable(typeof(UpdateContainerRegistryProtectionRuleRequest))]
+[JsonSerializable(typeof(GitLabContainerRegistryProtectionTagRule))]
+[JsonSerializable(typeof(GitLabContainerRegistryProtectionTagRule[]))]
+[JsonSerializable(typeof(CreateContainerRegistryProtectionTagRuleRequest))]
+[JsonSerializable(typeof(UpdateContainerRegistryProtectionTagRuleRequest))]
+// Projects job token scope. GitLabProject / GitLabProject[] are already registered above (reused for
+// the project allowlist responses).
+[JsonSerializable(typeof(GitLabProjectJobTokenScope))]
+[JsonSerializable(typeof(UpdateProjectJobTokenScopeRequest))]
+[JsonSerializable(typeof(AddProjectToJobTokenAllowlistRequest))]
+[JsonSerializable(typeof(AddGroupToJobTokenAllowlistRequest))]
+[JsonSerializable(typeof(GitLabJobTokenScopeGroup))]
+[JsonSerializable(typeof(GitLabJobTokenScopeGroup[]))]
+// Push rules (project and group).
+[JsonSerializable(typeof(GitLabProjectPushRule))]
+[JsonSerializable(typeof(GitLabGroupPushRule))]
+[JsonSerializable(typeof(CreatePushRuleRequest))]
+[JsonSerializable(typeof(UpdatePushRuleRequest))]
+// Terraform Module Registry (distinct from the Terraform remote-state DTOs above).
+[JsonSerializable(typeof(GitLabTerraformModule))]
+[JsonSerializable(typeof(GitLabTerraformModuleRoot))]
+[JsonSerializable(typeof(GitLabTerraformModuleProviderVersion))]
+[JsonSerializable(typeof(GitLabTerraformModuleVersionList))]
+[JsonSerializable(typeof(GitLabTerraformModuleVersionsEntry))]
+[JsonSerializable(typeof(GitLabTerraformModuleVersionInfo))]
+[JsonSerializable(typeof(GitLabTerraformModuleUploadResult))]
 internal sealed partial class GitLabJsonContext : JsonSerializerContext;

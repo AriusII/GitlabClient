@@ -14,8 +14,8 @@ public sealed class MembersRepositoryTests
 {
     /// <summary>
     ///     A group member as GitLab actually sends it, including the members this library does not model
-    ///     (<c>group_saml_identity</c>, <c>member_role</c>) - the context's UnmappedMemberHandling.Skip is
-    ///     what keeps those from failing the deserialization.
+    ///     (<c>group_saml_identity</c>, <c>group_scim_identity</c>, <c>member_role</c>) - the context's
+    ///     UnmappedMemberHandling.Skip is what keeps those from failing the deserialization.
     /// </summary>
     private const string FullMemberJson = """
                                           {
@@ -26,6 +26,9 @@ public sealed class MembersRepositoryTests
                                             "locked": false,
                                             "public_email": "john@example.com",
                                             "email": "john.smith@example.com",
+                                            "custom_attributes": [
+                                              { "key": "employee_id", "value": "4471" }
+                                            ],
                                             "avatar_url": "https://gitlab.example/uploads/-/system/user/avatar/29/avatar.png",
                                             "avatar_path": "/uploads/-/system/user/avatar/29/avatar.png",
                                             "web_url": "https://gitlab.example/john_smith",
@@ -47,6 +50,11 @@ public sealed class MembersRepositoryTests
                                               "provider": "group_saml",
                                               "extern_uid": "4085",
                                               "saml_provider_id": 52
+                                            },
+                                            "group_scim_identity": {
+                                              "extern_uid": "4085",
+                                              "group_id": 9,
+                                              "active": true
                                             },
                                             "member_role": {
                                               "id": 2,
@@ -239,6 +247,45 @@ public sealed class MembersRepositoryTests
     }
 
     [Fact]
+    public async Task AddAsync_WithUsernameInsteadOfUserId_SendsUsernameAndInviteSource()
+    {
+        const string Json = """
+                            {
+                              "id": 3,
+                              "username": "new_member",
+                              "name": "New Member",
+                              "state": "active",
+                              "web_url": "https://gitlab.example/new_member",
+                              "access_level": 30
+                            }
+                            """;
+
+        string? sentBody = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(Json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        MembersRepository repository = new(connection);
+
+        AddMemberRequest request = new() { AccessLevel = 30, Username = "new_member", InviteSource = "members-page" };
+
+        await repository.AddAsync(ProjectId.FromId(5), request, TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"username\":\"new_member\"", sentBody, StringComparison.Ordinal);
+        Assert.Contains("\"invite_source\":\"members-page\"", sentBody, StringComparison.Ordinal);
+
+        // user_id and username are mutually exclusive; leaving user_id unset must omit it, not send null.
+        Assert.DoesNotContain("user_id", sentBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task UpdateAsync_PutsToMemberRoute_WithSerializedBody_AndDeserializesUpdatedMember()
     {
         const string Json = """
@@ -278,6 +325,42 @@ public sealed class MembersRepositoryTests
         Assert.Contains("\"access_level\":40", sentBody, StringComparison.Ordinal);
         Assert.DoesNotContain("expires_at", sentBody, StringComparison.Ordinal);
         Assert.Equal(40, member.AccessLevel);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithMemberRoleId_SendsMemberRoleId()
+    {
+        const string Json = """
+                            {
+                              "id": 1,
+                              "username": "raymond_smith",
+                              "name": "Raymond Smith",
+                              "state": "active",
+                              "web_url": "https://gitlab.example/raymond_smith",
+                              "access_level": 40
+                            }
+                            """;
+
+        string? sentBody = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(Json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        MembersRepository repository = new(connection);
+
+        UpdateMemberRequest request = new() { AccessLevel = 40, MemberRoleId = 7 };
+
+        await repository.UpdateAsync(ProjectId.FromId(5), 1, request, TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"access_level\":40", sentBody, StringComparison.Ordinal);
+        Assert.Contains("\"member_role_id\":7", sentBody, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -359,7 +442,8 @@ public sealed class MembersRepositoryTests
             SkipUsers = [3],
             ShowSeatInfo = true,
             WithSamlIdentity = false,
-            PerPage = 50
+            PerPage = 50,
+            Page = 2
         };
 
         await foreach (GitLabMember _ in repository.ListForGroupAsync(GroupId.FromId(9), options,
@@ -378,6 +462,7 @@ public sealed class MembersRepositoryTests
         Assert.Contains("show_seat_info=true", requestUri, StringComparison.Ordinal);
         Assert.Contains("with_saml_identity=false", requestUri, StringComparison.Ordinal);
         Assert.Contains("per_page=50", requestUri, StringComparison.Ordinal);
+        Assert.Contains("page=2", requestUri, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -414,7 +499,7 @@ public sealed class MembersRepositoryTests
         GitLabApiConnection connection = new(httpClient);
         MembersRepository repository = new(connection);
 
-        AllMemberListOptions options = new() { State = GitLabMembershipState.Awaiting, ShowSeatInfo = true };
+        AllMemberListOptions options = new() { State = GitLabMembershipState.Awaiting, ShowSeatInfo = true, Page = 2 };
 
         await foreach (GitLabMember _ in repository.ListIncludingInheritedForProjectAsync(
                            ProjectId.FromPath("group/subgroup/project"), options,
@@ -427,6 +512,7 @@ public sealed class MembersRepositoryTests
         Assert.StartsWith("https://gitlab.example/api/v4/projects/group%2Fsubgroup%2Fproject/members/all?",
             requestUri, StringComparison.Ordinal);
         Assert.Contains("show_seat_info=true", requestUri, StringComparison.Ordinal);
+        Assert.Contains("page=2", requestUri, StringComparison.Ordinal);
 
         // The filter value comes from the enum's [JsonStringEnumMemberName], not from a hand-written literal.
         Assert.Contains("state=awaiting", requestUri, StringComparison.Ordinal);
@@ -479,6 +565,9 @@ public sealed class MembersRepositoryTests
         Assert.False(member.Locked);
         Assert.Equal("john@example.com", member.PublicEmail);
         Assert.Equal("john.smith@example.com", member.Email);
+        GitLabCustomAttribute attribute = Assert.Single(member.CustomAttributes ?? []);
+        Assert.Equal("employee_id", attribute.Key);
+        Assert.Equal("4471", attribute.Value);
         Assert.Equal("/uploads/-/system/user/avatar/29/avatar.png", member.AvatarPath);
         Assert.Equal(new DateTimeOffset(2025, 9, 22, 14, 13, 35, TimeSpan.Zero), member.CreatedAt);
         Assert.Equal("root", member.CreatedBy?.Username);

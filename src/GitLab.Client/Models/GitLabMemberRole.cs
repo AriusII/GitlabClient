@@ -103,11 +103,7 @@ public sealed record GitLabMemberRole
     ///     Configure merge request settings at the group or project level. Group actions include managing merge
     ///     checks and approval settings. Project actions include managing MR configurations, approval rules and
     ///     settings, and branch targets. In order to enable Suggested reviewers, the
-    ///     <c>
-    ///         Manage project access
-    ///         tokens
-    ///     </c>
-    ///     custom permission needs to be enabled.
+    ///     <c>Manage project access tokens</c> custom permission needs to be enabled.
     /// </summary>
     public bool? ManageMergeRequestSettings { get; init; }
 

@@ -44,4 +44,11 @@ public sealed record GitLabDeployment
     ///     single-deployment endpoints (get, create, update), never by the list endpoint.
     /// </summary>
     public int? PendingApprovalCount { get; init; }
+
+    /// <summary>
+    ///     The most recent approval or rejection recorded against this deployment, when its environment is
+    ///     protected. Returned only by the single-deployment endpoints (get, create, update), never by the
+    ///     list endpoint - the same extended-shape-only field as <see cref="PendingApprovalCount" />.
+    /// </summary>
+    public GitLabDeploymentApproval? Approvals { get; init; }
 }

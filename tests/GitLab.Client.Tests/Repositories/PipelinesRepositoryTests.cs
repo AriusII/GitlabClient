@@ -111,6 +111,11 @@ public sealed class PipelinesRepositoryTests
             Ref = "main",
             Sha = "a91957a858320c0e17f3a0eca7cfacbff50ea29a",
             Source = "push",
+            Name = "Nightly build",
+            Username = "octocat",
+            Scope = "finished",
+            CreatedAfter = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            CreatedBefore = new DateTimeOffset(2024, 12, 31, 0, 0, 0, TimeSpan.Zero),
             OrderBy = "id",
             Sort = "desc",
             PerPage = 20
@@ -129,6 +134,11 @@ public sealed class PipelinesRepositoryTests
         Assert.Contains("ref=main", requestUri);
         Assert.Contains("sha=a91957a858320c0e17f3a0eca7cfacbff50ea29a", requestUri);
         Assert.Contains("source=push", requestUri);
+        Assert.Contains("name=Nightly%20build", requestUri);
+        Assert.Contains("username=octocat", requestUri);
+        Assert.Contains("scope=finished", requestUri);
+        Assert.Contains("created_after=2024-01-01T00:00:00Z", requestUri);
+        Assert.Contains("created_before=2024-12-31T00:00:00Z", requestUri);
         Assert.Contains("order_by=id", requestUri);
         Assert.Contains("sort=desc", requestUri);
         Assert.Contains("per_page=20", requestUri);

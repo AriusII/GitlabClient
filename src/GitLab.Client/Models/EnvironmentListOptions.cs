@@ -18,5 +18,7 @@ public sealed record EnvironmentListOptions
     /// </summary>
     public string? States { get; init; }
 
+    public int? Page { get; init; }
+
     public int? PerPage { get; init; }
 }

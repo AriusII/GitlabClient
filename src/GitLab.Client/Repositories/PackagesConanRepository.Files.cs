@@ -9,13 +9,14 @@ namespace GitLab.Client.Repositories;
 ///     checks, at both instance-wide and per-project scope.
 ///     <para>
 ///         GitLab's <c>PUT .../export/:file_name</c> and <c>PUT .../package/.../:file_name</c> endpoints
-///         (uploading the recipe/package file itself) are deliberately NOT implemented here. Both take a
-///         <c>multipart/form-data</c> body and answer <c>200</c> with an empty body, but
-///         <c>IGitLabApiConnection.PutFileAsync&lt;TResponse&gt;</c> is the only multipart <c>PUT</c> the
-///         transport exposes and it requires a JSON response to deserialize - calling it against a
-///         genuinely empty body throws. There is no no-content sibling of <c>PutFileAsync</c> (unlike
-///         <c>PostFileAsync</c>, which has one). See this resource's implementation report for the six
-///         operations this affects.
+///         (uploading the recipe/package file itself) are deliberately NOT implemented here: they take a
+///         <c>multipart/form-data</c> body and answer <c>200</c> with an empty body, which the
+///         JSON-deserializing <c>IGitLabApiConnection.PutFileAsync&lt;TResponse&gt;</c> overload cannot
+///         express. The transport has since grown a no-content sibling of <c>PutFileAsync</c> for exactly
+///         this shape, and the four upload methods are implemented against it in
+///         <c>PackagesConanRepository.B.cs</c> (instance-wide recipe), <c>PackagesConanRepository.C.cs</c>
+///         (instance-wide package) and <c>PackagesConanRepository.F.cs</c> (project-scoped recipe and
+///         package) - the route helpers declared below are shared with those partials.
 ///     </para>
 /// </summary>
 internal sealed partial class PackagesConanRepository

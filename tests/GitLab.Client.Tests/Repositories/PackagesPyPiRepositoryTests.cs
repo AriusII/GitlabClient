@@ -204,4 +204,31 @@ public sealed class PackagesPyPiRepositoryTests
         Assert.Equal("https://gitlab.example/api/v4/projects/7/packages/pypi/simple/my.pypi.package",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
+
+    [Fact]
+    public async Task ForwardPackageFileAsync_EscapesBothPathSegments_AndReturnsTheLocationWithoutThrowing()
+    {
+        using StubHttpMessageHandler handler = new(_ =>
+        {
+            HttpResponseMessage response = new(HttpStatusCode.Found);
+            response.Headers.Location = new Uri("https://files.pythonhosted.org/packages/my.pypi.package-0.0.1.tar.gz");
+            return response;
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesPyPiRepository repository = new(connection);
+
+        GitLabRedirectResponse redirect = await repository.ForwardPackageFileAsync(7, "my.pypi.package",
+            "packages/source/m/my.pypi.package/my.pypi.package-0.0.1.tar.gz",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/7/packages/pypi/forward/my.pypi.package/"
+            + "packages%2Fsource%2Fm%2Fmy.pypi.package%2Fmy.pypi.package-0.0.1.tar.gz",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(HttpStatusCode.Found, redirect.StatusCode);
+        Assert.Equal(new Uri("https://files.pythonhosted.org/packages/my.pypi.package-0.0.1.tar.gz"),
+            redirect.Location);
+    }
 }

@@ -21,6 +21,7 @@ namespace GitLab.Client.Abstractions;
 /// </summary>
 public interface IVariablesClient
 {
+    /// <summary>Streams every CI/CD variable defined on a project.</summary>
     IAsyncEnumerable<GitLabVariable> ListProjectVariablesAsync(ProjectId projectId,
         VariableListOptions? options = null, CancellationToken cancellationToken = default);
 
@@ -31,9 +32,11 @@ public interface IVariablesClient
     Task<GitLabVariable> GetProjectVariableAsync(ProjectId projectId, string key, string? environmentScope = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates a project CI/CD variable.</summary>
     Task<GitLabVariable> CreateProjectVariableAsync(ProjectId projectId, CreateVariableRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Updates a project CI/CD variable.</summary>
     Task<GitLabVariable> UpdateProjectVariableAsync(ProjectId projectId, string key, UpdateVariableRequest request,
         CancellationToken cancellationToken = default);
 
@@ -44,18 +47,23 @@ public interface IVariablesClient
     Task DeleteProjectVariableAsync(ProjectId projectId, string key, string? environmentScope = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Streams every CI/CD variable defined on a group.</summary>
     IAsyncEnumerable<GitLabVariable> ListGroupVariablesAsync(GroupId groupId, VariableListOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Reads one group CI/CD variable.</summary>
     Task<GitLabVariable> GetGroupVariableAsync(GroupId groupId, string key,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates a group CI/CD variable.</summary>
     Task<GitLabVariable> CreateGroupVariableAsync(GroupId groupId, CreateVariableRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Updates a group CI/CD variable.</summary>
     Task<GitLabVariable> UpdateGroupVariableAsync(GroupId groupId, string key, UpdateVariableRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes one group CI/CD variable.</summary>
     Task DeleteGroupVariableAsync(GroupId groupId, string key, CancellationToken cancellationToken = default);
 
     /// <summary>

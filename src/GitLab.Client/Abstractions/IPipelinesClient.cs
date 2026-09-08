@@ -6,20 +6,32 @@ namespace GitLab.Client.Abstractions;
 /// <summary>Wraps the GitLab "Pipelines" API area (<c>/projects/:id/pipelines</c>).</summary>
 public interface IPipelinesClient
 {
+    /// <summary>Streams a project's pipelines (<c>GET /projects/:id/pipelines</c>), following the pagination links.</summary>
     IAsyncEnumerable<GitLabPipeline> ListAsync(ProjectId projectId, PipelineListOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves one pipeline by its ID (<c>GET /projects/:id/pipelines/:pipeline_id</c>).</summary>
     Task<GitLabPipeline> GetAsync(ProjectId projectId, long pipelineId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Creates (triggers) a new pipeline for a ref (<c>POST /projects/:id/pipeline</c> - note the
+    ///     singular route, unlike every other pipeline endpoint).
+    /// </summary>
     Task<GitLabPipeline> CreateAsync(ProjectId projectId, CreatePipelineRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Cancels all of a pipeline's running jobs (<c>POST /projects/:id/pipelines/:pipeline_id/cancel</c>).</summary>
     Task<GitLabPipeline> CancelAsync(ProjectId projectId, long pipelineId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retries a pipeline's failed and canceled jobs (<c>POST /projects/:id/pipelines/:pipeline_id/retry</c>).</summary>
     Task<GitLabPipeline> RetryAsync(ProjectId projectId, long pipelineId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Deletes a pipeline along with its jobs, logs, artifacts and triggers
+    ///     (<c>DELETE /projects/:id/pipelines/:pipeline_id</c>). Requires the Owner role; irreversible.
+    /// </summary>
     Task DeleteAsync(ProjectId projectId, long pipelineId, CancellationToken cancellationToken = default);
 
     /// <summary>

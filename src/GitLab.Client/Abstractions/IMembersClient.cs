@@ -27,11 +27,15 @@ public interface IMembersClient
     /// <summary>Reads one direct project member. Throws <c>GitLabNotFoundException</c> when the membership is inherited.</summary>
     Task<GitLabMember> GetAsync(ProjectId projectId, long userId, CancellationToken cancellationToken = default);
 
-    /// <summary>Adds a user to a project at the requested access level.</summary>
+    /// <summary>
+    ///     Adds a user to a project at the requested access level. GitLab identifies the new member by ID
+    ///     or by username, so exactly one of <see cref="AddMemberRequest.UserId" /> and
+    ///     <see cref="AddMemberRequest.Username" /> must be set.
+    /// </summary>
     Task<GitLabMember> AddAsync(ProjectId projectId, AddMemberRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Changes a direct project member's access level or expiry date.</summary>
+    /// <summary>Changes a direct project member's access level, expiry date or custom member role.</summary>
     Task<GitLabMember> UpdateAsync(ProjectId projectId, long userId, UpdateMemberRequest request,
         CancellationToken cancellationToken = default);
 

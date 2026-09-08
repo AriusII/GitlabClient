@@ -200,6 +200,7 @@ public sealed class IssuesRepositoryTests
             MilestoneId = GitLabIssueMilestoneFilter.Upcoming,
             AssigneeId = "None",
             Scope = GitLabIssueScope.All,
+            EpicId = 12,
             HealthStatus = GitLabIssueHealthStatus.AtRisk,
             NonArchived = true
         };
@@ -214,7 +215,7 @@ public sealed class IssuesRepositoryTests
         Assert.Equal(
             "https://gitlab.example/api/v4/projects/gitlab-org%2Fgitlab/issues"
             + "?state=opened&labels=bug&per_page=20&order_by=updated_at&sort=asc&due_date=0"
-            + "&milestone_id=Upcoming&assignee_id=None&scope=all&health_status=at_risk&non_archived=true",
+            + "&milestone_id=Upcoming&assignee_id=None&scope=all&epic_id=12&health_status=at_risk&non_archived=true",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal(76, Assert.Single(issues).Id);
     }
@@ -805,6 +806,27 @@ public sealed class IssuesRepositoryTests
     }
 
     [Fact]
+    public async Task GetProjectStatisticsAsync_ProjectsFiltersOntoTheQueryString()
+    {
+        const string Json = """{ "statistics": { "counts": { "all": 1, "closed": 0, "opened": 1 } } }""";
+
+        using StubHttpMessageHandler handler = Responds(Json);
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        IssuesRepository repository = new(connection);
+
+        await repository.GetProjectStatisticsAsync(
+            "gitlab-org/gitlab",
+            new IssueStatisticsOptions { Labels = BugLabel, AuthorId = 9, Confidential = false },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/gitlab-org%2Fgitlab/issues_statistics"
+            + "?labels=bug&author_id=9&confidential=false",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task GetGroupStatisticsAsync_BuildsTheGroupScopedRoute()
     {
         const string Json = """{ "statistics": { "counts": { "all": 1, "closed": 0, "opened": 1 } } }""";
@@ -817,6 +839,27 @@ public sealed class IssuesRepositoryTests
         await repository.GetGroupStatisticsAsync("gitlab-org/sub", null, TestContext.Current.CancellationToken);
 
         Assert.Equal("https://gitlab.example/api/v4/groups/gitlab-org%2Fsub/issues_statistics",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task GetGroupStatisticsAsync_ProjectsFiltersOntoTheQueryString()
+    {
+        const string Json = """{ "statistics": { "counts": { "all": 1, "closed": 0, "opened": 1 } } }""";
+
+        using StubHttpMessageHandler handler = Responds(Json);
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        IssuesRepository repository = new(connection);
+
+        await repository.GetGroupStatisticsAsync(
+            "gitlab-org/sub",
+            new IssueStatisticsOptions { Scope = GitLabIssueScope.AssignedToMe, Weight = "None" },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/gitlab-org%2Fsub/issues_statistics"
+            + "?scope=assigned_to_me&weight=None",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 

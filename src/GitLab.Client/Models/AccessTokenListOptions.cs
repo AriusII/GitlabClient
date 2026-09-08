@@ -10,7 +10,7 @@ namespace GitLab.Client.Models;
 ///     declares identically.
 /// </summary>
 [GitLabQuery]
-public sealed record AccessTokenListOptions
+public readonly record struct AccessTokenListOptions
 {
     /// <summary>Return only tokens whose revoked state matches this value.</summary>
     public bool? Revoked { get; init; }

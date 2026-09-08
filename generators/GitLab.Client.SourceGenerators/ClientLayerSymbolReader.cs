@@ -2,6 +2,7 @@ using System.Text;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace GitLab.Client.SourceGenerators;
 
@@ -110,30 +111,7 @@ internal static class ClientLayerSymbolReader
         LocationInfo? fallbackLocation,
         CancellationToken cancellationToken)
     {
-        Dictionary<string, ISymbol> available = new(StringComparer.Ordinal);
-
-        foreach (INamedTypeSymbol candidate in EnumerateInterfaces(dependencyInterface))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            foreach (ISymbol member in candidate.GetMembers())
-            {
-                if (member.IsStatic || member.DeclaredAccessibility != Accessibility.Public)
-                {
-                    continue;
-                }
-
-                switch (member)
-                {
-                    case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
-                        AddIfAbsent(available, MethodSignatureKey(method), method);
-                        break;
-                    case IPropertySymbol { IsIndexer: false } property:
-                        AddIfAbsent(available, PropertySignatureKey(property), property);
-                        break;
-                }
-            }
-        }
+        Dictionary<string, ISymbol> available = BuildSignatureMap(dependencyInterface, cancellationToken);
 
         foreach (IMethodSymbol method in methods)
         {
@@ -163,7 +141,8 @@ internal static class ClientLayerSymbolReader
     }
 
     public static MethodModel CreateMethodModel(IMethodSymbol method, List<DiagnosticInfo> diagnostics,
-        LocationInfo? fallbackLocation)
+        LocationInfo? fallbackLocation, IReadOnlyDictionary<string, ISymbol> documentationSource,
+        CancellationToken cancellationToken)
     {
         List<ParameterModel> parameters = new();
 
@@ -189,16 +168,131 @@ internal static class ClientLayerSymbolReader
             ClientLayerNaming.EscapeIdentifier(method.Name),
             RenderTypeParameterList(method),
             EquatableArray<string>.From(constraints),
-            EquatableArray<ParameterModel>.From(parameters));
+            EquatableArray<ParameterModel>.From(parameters),
+            FindDocComment(documentationSource, MethodSignatureKey(method), cancellationToken));
     }
 
-    public static PropertyModel CreatePropertyModel(IPropertySymbol property)
+    public static PropertyModel CreatePropertyModel(IPropertySymbol property,
+        IReadOnlyDictionary<string, ISymbol> documentationSource, CancellationToken cancellationToken)
     {
         return new PropertyModel(
             Fqn(property.Type),
             ClientLayerNaming.EscapeIdentifier(property.Name),
             property.GetMethod is not null,
-            property.SetMethod is not null);
+            property.SetMethod is not null,
+            FindDocComment(documentationSource, PropertySignatureKey(property), cancellationToken));
+    }
+
+    /// <summary>
+    ///     Indexes the ORIGINAL Repository interface's public methods and properties by the same
+    ///     structural signature key <see cref="VerifyForwardable" /> already uses, so a Service or
+    ///     Controller member can look up "the Repository member with this shape" regardless of which
+    ///     interface (Service or Client) actually declared the member being forwarded. Keying by
+    ///     structural signature rather than by symbol identity is what makes this transitive: a Controller
+    ///     member's signature key equals its Service counterpart's, which - because
+    ///     <see cref="VerifyForwardable" /> already required it to compile - equals the Repository
+    ///     member's key too.
+    /// </summary>
+    public static Dictionary<string, ISymbol> BuildSignatureMap(INamedTypeSymbol interfaceSymbol,
+        CancellationToken cancellationToken)
+    {
+        Dictionary<string, ISymbol> map = new(StringComparer.Ordinal);
+
+        foreach (INamedTypeSymbol candidate in EnumerateInterfaces(interfaceSymbol))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (ISymbol member in candidate.GetMembers())
+            {
+                if (member.IsStatic || member.DeclaredAccessibility != Accessibility.Public)
+                {
+                    continue;
+                }
+
+                switch (member)
+                {
+                    case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
+                        AddIfAbsent(map, MethodSignatureKey(method), method);
+                        break;
+                    case IPropertySymbol { IsIndexer: false } property:
+                        AddIfAbsent(map, PropertySignatureKey(property), property);
+                        break;
+                }
+            }
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    ///     Looks up the Repository member matching <paramref name="signatureKey" /> and, when found, copies
+    ///     its XML doc-comment trivia verbatim - see <see cref="ExtractDocCommentLines" />. A member absent
+    ///     from the map (nothing to look up against, or the Repository genuinely declares no doc comment on
+    ///     it) yields an empty result, which renders as no doc comment at all: unchanged from today.
+    /// </summary>
+    private static EquatableArray<string> FindDocComment(IReadOnlyDictionary<string, ISymbol> documentationSource,
+        string signatureKey, CancellationToken cancellationToken)
+    {
+        return documentationSource.TryGetValue(signatureKey, out ISymbol? repositoryMember)
+            ? ExtractDocCommentLines(repositoryMember, cancellationToken)
+            : EquatableArray<string>.Empty;
+    }
+
+    /// <summary>
+    ///     Reads the RAW <c>///</c> trivia straight off the member's syntax node - deliberately not
+    ///     <see cref="ISymbol.GetDocumentationCommentXml" />, which re-renders the comment into a different,
+    ///     resolved XML shape (e.g. <c>cref</c> attributes rewritten to documentation-ID form) that is not
+    ///     valid to splice back in as source text. Each returned line is the original source line with its
+    ///     leading whitespace and <c>///</c> marker stripped - everything after that, including whatever
+    ///     hanging indentation the author used, is kept byte-for-byte so the caller only has to re-indent
+    ///     and re-prefix, never reformat.
+    /// </summary>
+    private static EquatableArray<string> ExtractDocCommentLines(ISymbol symbol, CancellationToken cancellationToken)
+    {
+        SyntaxReference? reference = symbol.DeclaringSyntaxReferences.FirstOrDefault();
+
+        if (reference is null)
+        {
+            return EquatableArray<string>.Empty;
+        }
+
+        SyntaxNode node = reference.GetSyntax(cancellationToken);
+        SyntaxTrivia? docTrivia = null;
+
+        foreach (SyntaxTrivia trivia in node.GetLeadingTrivia())
+        {
+            if (trivia.GetStructure() is DocumentationCommentTriviaSyntax)
+            {
+                docTrivia = trivia;
+            }
+        }
+
+        if (docTrivia is null)
+        {
+            return EquatableArray<string>.Empty;
+        }
+
+        List<string> lines = new();
+
+        // The exterior "///" marker on the first line is NOT part of this trivia's own text (it lives
+        // there, but continuation lines' leading whitespace + "///" IS baked into their text, since each
+        // continuation line re-starts the exterior trivia). Splitting on the marker itself, rather than on
+        // a fixed column, handles both shapes uniformly.
+        foreach (string rawLine in docTrivia.Value.ToFullString().Replace("\r\n", "\n").Split('\n'))
+        {
+            int markerIndex = rawLine.IndexOf("///", StringComparison.Ordinal);
+
+            if (markerIndex < 0)
+            {
+                // The only line this happens for is the artefact of the trailing end-of-line trivia
+                // after the closing "///</summary>"-style line, which carries no content of its own.
+                continue;
+            }
+
+            lines.Add(rawLine.Substring(markerIndex + 3));
+        }
+
+        return EquatableArray<string>.From(lines);
     }
 
     private static void CollectMethod(INamedTypeSymbol interfaceSymbol, IMethodSymbol method,

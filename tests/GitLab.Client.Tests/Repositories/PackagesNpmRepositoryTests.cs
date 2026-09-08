@@ -303,6 +303,46 @@ public sealed class PackagesNpmRepositoryTests
     }
 
     [Fact]
+    public async Task GetDistTagsForGroupAsync_BuildsTheGroupDistTagsRoute_AndDeserializes()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ => new HttpResponseMessage(
+            HttpStatusCode.OK) { Content = new StringContent(DistTagsJson, Encoding.UTF8, "application/json") });
+
+        using HttpClient client = httpClient;
+        GitLabApiConnection connection = new(client);
+        PackagesNpmRepository repository = new(connection);
+
+        GitLabNpmDistTags tags = await repository.GetDistTagsForGroupAsync(42, "my-package",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/42/-/packages/npm/-/package/my-package/dist-tags",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        Assert.NotNull(tags.DistTags);
+        Assert.Equal("1.0.1", tags.DistTags!["latest"]);
+    }
+
+    [Fact]
+    public async Task SetDistTagForGroupAsync_PutsToTheGroupTagRoute_WithNoBody()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient client = httpClient;
+        GitLabApiConnection connection = new(client);
+        PackagesNpmRepository repository = new(connection);
+
+        await repository.SetDistTagForGroupAsync(42, "my-package", "beta", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/42/-/packages/npm/-/package/my-package/dist-tags/beta",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task DeleteDistTagForGroupAsync_BuildsTheGroupDistTagsRoute()
     {
         (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
@@ -335,6 +375,24 @@ public sealed class PackagesNpmRepositoryTests
 
         Assert.Equal(
             "https://gitlab.example/api/v4/groups/42/-/packages/npm/-/npm/v1/security/advisories/bulk",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task QuickAuditForGroupAsync_PostsToTheGroupSecurityRoute()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using HttpClient client = httpClient;
+        GitLabApiConnection connection = new(client);
+        PackagesNpmRepository repository = new(connection);
+
+        await repository.QuickAuditForGroupAsync(42, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/42/-/packages/npm/-/npm/v1/security/audits/quick",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 
@@ -384,6 +442,41 @@ public sealed class PackagesNpmRepositoryTests
 
         Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
         Assert.Equal("https://gitlab.example/api/v4/packages/npm/-/package/my-package/dist-tags/latest",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task DeleteDistTagAsync_DeletesTheInstanceScopedTagRoute()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient client = httpClient;
+        GitLabApiConnection connection = new(client);
+        PackagesNpmRepository repository = new(connection);
+
+        await repository.DeleteDistTagAsync("my-package", "beta", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/packages/npm/-/package/my-package/dist-tags/beta",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task BulkAdvisoriesAsync_PostsToTheInstanceScopedSecurityRoute_WithNoBody()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK));
+
+        using HttpClient client = httpClient;
+        GitLabApiConnection connection = new(client);
+        PackagesNpmRepository repository = new(connection);
+
+        await repository.BulkAdvisoriesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/packages/npm/-/npm/v1/security/advisories/bulk",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
     }
 

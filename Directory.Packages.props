@@ -24,6 +24,11 @@
          bans. 5.6.0 is the newest published version - this package does not track the 5.9.0
          Microsoft.CodeAnalysis.* line below, so "aligning" it to 5.9.0 breaks restore with NU1102. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+    <!-- Tracks the declared public API surface (PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt) so an
+         accidental breaking change or an accidentally-exposed public member is a build error (RS0016/RS0017),
+         not a silent diff across ~150 client interfaces and ~1000 DTOs. Same 5.6.0 line as
+         BannedApiAnalyzers above - also the newest version published on NuGet.org at time of writing. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
   </ItemGroup>
   <ItemGroup Label="SourceGenerators">
     <!-- global.json pins the exact SDK this repo builds with, so the only CS9057 ("newer compiler

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 
+using GitLab.Client.Abstractions;
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
 using GitLab.Client.Models;
@@ -167,6 +168,41 @@ public sealed class ReleasesRepositoryTests
         Assert.Contains("\"ref\":\"main\"", sentBody, StringComparison.Ordinal);
         Assert.Equal("v2.0.0", release.TagName);
         Assert.Equal("New major release.", release.Description);
+    }
+
+    [Fact]
+    public async Task CreateAsync_PostsTagMessageMilestonesAndReleasedAtWhenSet()
+    {
+        const string Json = """{ "tag_name": "v2.0.0" }""";
+
+        string? sentBody = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(Json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ReleasesRepository repository = new(connection);
+
+        CreateReleaseRequest request = new()
+        {
+            TagName = "v2.0.0",
+            TagMessage = "Signed release",
+            ReleasedAt = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
+            Milestones = ["v2.0"]
+        };
+
+        await repository.CreateAsync(42, request, TestContext.Current.CancellationToken);
+
+        // Unset members (Ref, Description, MilestoneIds) are omitted rather than sent as null.
+        Assert.Equal(
+            """{"tag_name":"v2.0.0","tag_message":"Signed release","released_at":"2024-07-01T00:00:00+00:00","milestones":["v2.0"]}""",
+            sentBody);
     }
 
     [Fact]
@@ -359,6 +395,37 @@ public sealed class ReleasesRepositoryTests
         // Unset members are omitted rather than sent as null, so a partial update cannot clear the description.
         Assert.Equal("""{"name":"Release candidate 1","milestones":["v1.0"]}""", sentBody);
         Assert.Equal("Release candidate 1", release.Name);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PostsReleasedAtAndMilestoneIds_MutuallyExclusiveWithMilestones()
+    {
+        const string Json = """{ "tag_name": "v1.0/rc1" }""";
+
+        string? sentBody = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(Json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ReleasesRepository repository = new(connection);
+
+        UpdateReleaseRequest request = new()
+        {
+            ReleasedAt = new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero), MilestoneIds = [51, 52]
+        };
+
+        await repository.UpdateAsync(42, "v1.0/rc1", request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            """{"released_at":"2024-06-01T00:00:00+00:00","milestone_ids":[51,52]}""",
+            sentBody);
     }
 
     [Fact]
@@ -569,5 +636,77 @@ public sealed class ReleasesRepositoryTests
         Assert.Equal(HttpMethod.Delete, handler.LastRequest?.Method);
         Assert.Equal("https://gitlab.example/api/v4/projects/42/releases/v1.0%2Frc1/assets/links/2",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task GetLatestReleaseAsync_BuildsThePermalinkRoute_AndStreamsTheBody()
+    {
+        const string Json = """{"tag_name":"v2.0.0","name":"Latest"}""";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Json, Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ReleasesRepository repository = new(connection);
+
+        using GitLabFileResponse file =
+            await repository.GetLatestReleaseAsync(42, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/42/releases/permalink/latest",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        using StreamReader reader = new(file.Content, Encoding.UTF8);
+        Assert.Equal(Json, await reader.ReadToEndAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetLatestReleaseSuffixPathAsync_EscapesAndAppendsTheSuffix()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([0x00])
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ReleasesRepository repository = new(connection);
+
+        using GitLabFileResponse file = await repository.GetLatestReleaseSuffixPathAsync(
+            "gitlab-org/gitlab", "downloads/binary.zip", TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/gitlab-org%2Fgitlab/releases/permalink/latest/downloads%2Fbinary.zip",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.NotNull(file.Content);
+    }
+
+    [Fact]
+    public async Task DownloadReleaseAssetAsync_EscapesTagNameAndAssetPath_AndStreamsTheBody()
+    {
+        const string Contents = "binary-content";
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(Contents, Encoding.UTF8, "application/octet-stream")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = new Uri("https://gitlab.example/api/v4/") };
+        GitLabApiConnection connection = new(httpClient);
+        ReleasesRepository repository = new(connection);
+
+        using GitLabFileResponse file = await repository.DownloadReleaseAssetAsync(
+            42, "v1.0/rc1", "bin/app.exe", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/42/releases/v1.0%2Frc1/downloads/bin%2Fapp.exe",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        using StreamReader reader = new(file.Content, Encoding.UTF8);
+        Assert.Equal(Contents, await reader.ReadToEndAsync(TestContext.Current.CancellationToken));
     }
 }

@@ -34,6 +34,11 @@ public interface IExperimentsClient
     ///     (<c>POST /experiments/:experiment_name/assignments</c>). The assignment is cached in Redis and
     ///     persists until overwritten or cleared.
     /// </summary>
+    /// <param name="experimentName">The experiment's key.</param>
+    /// <param name="request">
+    ///     The variant to force and the context to force it for - see <see cref="GetAssignmentAsync" />.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task<GitLabExperimentAssignment> ForceAssignmentAsync(string experimentName,
         ForceExperimentAssignmentRequest request, CancellationToken cancellationToken = default);
 
@@ -53,5 +58,7 @@ public interface IExperimentsClient
     ///     (<c>DELETE /experiments/:name/cache</c>). Useful once an experiment's code has been removed and
     ///     its stale cache entries are no longer needed.
     /// </summary>
+    /// <param name="experimentName">The experiment's key.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task DeleteCacheAsync(string experimentName, CancellationToken cancellationToken = default);
 }

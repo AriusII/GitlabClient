@@ -15,51 +15,76 @@ namespace GitLab.Client.Abstractions;
 /// </summary>
 public interface IAwardEmojiClient
 {
+    /// <summary>Streams the reactions on an issue (<c>GET /projects/:id/issues/:issue_iid/award_emoji</c>).</summary>
     IAsyncEnumerable<GitLabAwardEmoji> ListForIssueAsync(ProjectId projectId, long issueIid,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves one reaction on an issue by its award id.</summary>
     Task<GitLabAwardEmoji> GetForIssueAsync(ProjectId projectId, long issueIid, long awardId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Adds a reaction to an issue. The emoji name carries no colons.</summary>
     Task<GitLabAwardEmoji> AddToIssueAsync(ProjectId projectId, long issueIid, CreateAwardEmojiRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Removes one of the caller's own reactions from an issue.</summary>
     Task DeleteFromIssueAsync(ProjectId projectId, long issueIid, long awardId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Streams the reactions on a comment of an issue
+    ///     (<c>GET /projects/:id/issues/:issue_iid/notes/:note_id/award_emoji</c>).
+    /// </summary>
     IAsyncEnumerable<GitLabAwardEmoji> ListForIssueNoteAsync(ProjectId projectId, long issueIid, long noteId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves one reaction on an issue comment by its award id.</summary>
     Task<GitLabAwardEmoji> GetForIssueNoteAsync(ProjectId projectId, long issueIid, long noteId, long awardId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Adds a reaction to an issue comment.</summary>
     Task<GitLabAwardEmoji> AddToIssueNoteAsync(ProjectId projectId, long issueIid, long noteId,
         CreateAwardEmojiRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Removes one of the caller's own reactions from an issue comment.</summary>
     Task DeleteFromIssueNoteAsync(ProjectId projectId, long issueIid, long noteId, long awardId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Streams the reactions on a merge request
+    ///     (<c>GET /projects/:id/merge_requests/:merge_request_iid/award_emoji</c>).
+    /// </summary>
     IAsyncEnumerable<GitLabAwardEmoji> ListForMergeRequestAsync(ProjectId projectId, long mergeRequestIid,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves one reaction on a merge request by its award id.</summary>
     Task<GitLabAwardEmoji> GetForMergeRequestAsync(ProjectId projectId, long mergeRequestIid, long awardId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Adds a reaction to a merge request. The emoji name carries no colons.</summary>
     Task<GitLabAwardEmoji> AddToMergeRequestAsync(ProjectId projectId, long mergeRequestIid,
         CreateAwardEmojiRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Removes one of the caller's own reactions from a merge request.</summary>
     Task DeleteFromMergeRequestAsync(ProjectId projectId, long mergeRequestIid, long awardId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Streams the reactions on a comment of a merge request
+    ///     (<c>GET /projects/:id/merge_requests/:merge_request_iid/notes/:note_id/award_emoji</c>).
+    /// </summary>
     IAsyncEnumerable<GitLabAwardEmoji> ListForMergeRequestNoteAsync(ProjectId projectId, long mergeRequestIid,
         long noteId, CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves one reaction on a merge request comment by its award id.</summary>
     Task<GitLabAwardEmoji> GetForMergeRequestNoteAsync(ProjectId projectId, long mergeRequestIid, long noteId,
         long awardId, CancellationToken cancellationToken = default);
 
+    /// <summary>Adds a reaction to a merge request comment.</summary>
     Task<GitLabAwardEmoji> AddToMergeRequestNoteAsync(ProjectId projectId, long mergeRequestIid, long noteId,
         CreateAwardEmojiRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Removes one of the caller's own reactions from a merge request comment.</summary>
     Task DeleteFromMergeRequestNoteAsync(ProjectId projectId, long mergeRequestIid, long noteId, long awardId,
         CancellationToken cancellationToken = default);
 

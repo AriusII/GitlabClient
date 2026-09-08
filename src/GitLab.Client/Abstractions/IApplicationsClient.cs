@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using GitLab.Client.Models;
 
 namespace GitLab.Client.Abstractions;
@@ -13,6 +15,13 @@ namespace GitLab.Client.Abstractions;
 ///         <see cref="GitLabApplicationWithSecret" /> while every other method returns the secret-free
 ///         <see cref="GitLabApplication" />. Persist a returned secret immediately; GitLab cannot show
 ///         it again, and callers must never log the create/renew request or response.
+///     </para>
+///     <para>
+///         <see cref="GetWorkspacesHttpServerConfigAsync" /> is the odd one out: GitLab's spec tags it
+///         "OAuth applications" even though it carries the internal, agent-facing configuration for
+///         GitLab Workspaces' HTTP server rather than anything about OAuth clients. It is exposed here
+///         only because that is its spec tag; do not read it as part of the application-registration
+///         surface above.
 ///     </para>
 /// </summary>
 public interface IApplicationsClient
@@ -55,4 +64,12 @@ public interface IApplicationsClient
 
     /// <summary>Deletes one of the current user's OAuth applications.</summary>
     Task DeleteForCurrentUserAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Returns configuration for the GitLab Workspaces HTTP server
+    ///     (<c>GET /internal/agents/agentw/server_config</c>). An internal, agent-facing endpoint - see the
+    ///     remarks on this interface for why it lives here despite the name. GitLab's spec declares no
+    ///     response schema, so the answer is a raw <see cref="JsonElement" /> rather than an invented DTO.
+    /// </summary>
+    Task<JsonElement> GetWorkspacesHttpServerConfigAsync(CancellationToken cancellationToken = default);
 }

@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     <c>per_page</c> are the only query parameters in the spec.
 /// </summary>
 [GitLabQuery]
-public sealed record VariableListOptions
+public readonly record struct VariableListOptions
 {
     public int? PerPage { get; init; }
 }

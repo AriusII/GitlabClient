@@ -76,15 +76,15 @@ public sealed class PackagesRpmRepositoryTests
         PackagesRpmRepository repository = new(connection);
 
         using GitLabFileResponse response =
-            await repository.DownloadRepositoryMetadataAsync(7, "repomd.xml", TestContext.Current.CancellationToken);
+            await repository.DownloadRepositoryMetadataAsync(7, "repo md.xml", TestContext.Current.CancellationToken);
 
-        Assert.Equal("https://gitlab.example/api/v4/projects/7/packages/rpm/repodata/repomd.xml",
+        Assert.Equal("https://gitlab.example/api/v4/projects/7/packages/rpm/repodata/repo%20md.xml",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
-    public async Task DownloadPackageFileAsync_BuildsTheRouteFromTheNumericFileId()
+    public async Task DownloadPackageFileAsync_BuildsTheRouteFromTheNumericFileId_AndEscapesTheFileName()
     {
         using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -96,9 +96,9 @@ public sealed class PackagesRpmRepositoryTests
         PackagesRpmRepository repository = new(connection);
 
         using GitLabFileResponse response = await repository.DownloadPackageFileAsync(7, 42,
-            "my-package-1.0-1.x86_64.rpm", TestContext.Current.CancellationToken);
+            "my package-1.0-1.x86_64.rpm", TestContext.Current.CancellationToken);
 
-        Assert.Equal("https://gitlab.example/api/v4/projects/7/packages/rpm/42/my-package-1.0-1.x86_64.rpm",
+        Assert.Equal("https://gitlab.example/api/v4/projects/7/packages/rpm/42/my%20package-1.0-1.x86_64.rpm",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

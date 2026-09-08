@@ -6,8 +6,21 @@ namespace GitLab.Client.Abstractions;
 /// <summary>Wraps the GitLab "Commits" API area (<c>/projects/:id/repository/commits</c>).</summary>
 public interface ICommitsClient
 {
-    Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, CancellationToken cancellationToken = default);
+    /// <summary>Retrieves a single commit (<c>GET /projects/:id/repository/commits/:sha</c>).</summary>
+    /// <param name="projectId">The project the commit belongs to.</param>
+    /// <param name="sha">A commit SHA, or the name of a branch or tag.</param>
+    /// <param name="stats">
+    ///     Includes <see cref="GitLabCommit.Stats" /> in the response. GitLab includes it by default;
+    ///     pass <see langword="false" /> to omit it from the response.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<GitLabCommit> GetAsync(ProjectId projectId, string sha, bool? stats = null,
+        CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Streams a project's commits (<c>GET /projects/:id/repository/commits</c>), optionally scoped to
+    ///     a branch or tag and a date range via <see cref="CommitListOptions" />.
+    /// </summary>
     IAsyncEnumerable<GitLabCommit> ListAsync(ProjectId projectId, CommitListOptions? options = null,
         CancellationToken cancellationToken = default);
 

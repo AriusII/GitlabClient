@@ -16,7 +16,7 @@ namespace GitLab.Client.Models;
 ///     size of 20 turns that into a great many round trips.
 /// </remarks>
 [GitLabQuery]
-public sealed record StorageMoveListOptions
+public readonly record struct StorageMoveListOptions
 {
     /// <summary>Items per page. GitLab defaults to 20 and caps the value at 100.</summary>
     public int? PerPage { get; init; }

@@ -20,5 +20,11 @@ public sealed record BulkImportEntityListOptions
     /// <summary>Return only entities in this lifecycle state.</summary>
     public GitLabBulkImportStatus? Status { get; init; }
 
+    /// <summary>
+    ///     The first page to fetch. Listing streams every following page on its own, so this skips the
+    ///     pages before it rather than pinning the answer to a single page.
+    /// </summary>
+    public int? Page { get; init; }
+
     public int? PerPage { get; init; }
 }

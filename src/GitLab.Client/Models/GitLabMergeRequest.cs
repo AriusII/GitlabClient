@@ -1,5 +1,14 @@
 namespace GitLab.Client.Models;
 
+/// <summary>
+///     A merge request within a GitLab project, as returned by the Merge Requests API.
+///     <para>
+///         Several members are populated only by specific endpoints rather than every listing - see
+///         <see cref="TimeStats" />, <see cref="ChangesCount" /> and <see cref="Changes" /> for the notable
+///         cases. The type is also embedded by other resources, such as
+///         <see cref="GitLabStatusCheckResponse.MergeRequest" />.
+///     </para>
+/// </summary>
 public sealed record GitLabMergeRequest
 {
     public required long Id { get; init; }

@@ -175,6 +175,81 @@ public sealed class GitLabApiConnectionEmptyBodyTests
         Assert.True(content.CanRead);
     }
 
+    [Fact]
+    public async Task PutFileAsync_WithNoResponseBody_SendsTheMultipartParts_AndLeavesTheCallersStreamOpen()
+    {
+        using RecordingHandler handler = new(() => new HttpResponseMessage(HttpStatusCode.OK));
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        using MemoryStream content = new([0x1f, 0x8b], false);
+
+        GitLabFileUpload upload = new() { Content = content, FileName = "package-1.0.0.tar.gz" };
+
+        await connection.PutFileAsync(TerraformStateRoute, upload, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.Method);
+        Assert.StartsWith("multipart/form-data", handler.RequestContentType, StringComparison.Ordinal);
+        Assert.Contains("filename=package-1.0.0.tar.gz", handler.RequestBody, StringComparison.Ordinal);
+
+        // The upload stream is borrowed, never owned: disposing the request must not close what the caller
+        // may still want to rewind and retry with.
+        Assert.True(content.CanRead);
+    }
+
+    [Fact]
+    public async Task PutFileAsync_WithNoResponseBody_StillThrowsTheTypedException_OnAFailureStatus()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = new StringContent("""{"message":"already exists"}""", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        using MemoryStream content = new([0x1f, 0x8b], false);
+        GitLabFileUpload upload = new() { Content = content, FileName = "package-1.0.0.tar.gz" };
+
+        await Assert.ThrowsAsync<GitLabConflictException>(() =>
+            connection.PutFileAsync(TerraformStateRoute, upload, null, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetRedirectAsync_ReturnsTheLocationHeader_WithoutThrowingOnA302()
+    {
+        using StubHttpMessageHandler handler = new(_ =>
+        {
+            HttpResponseMessage response = new(HttpStatusCode.Found);
+            response.Headers.Location = new Uri("https://upstream.example/files/pkg-1.0.0.tar.gz");
+            return response;
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        GitLabRedirectResponse redirect =
+            await connection.GetRedirectAsync(PagesAccessRoute, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Found, redirect.StatusCode);
+        Assert.Equal(new Uri("https://upstream.example/files/pkg-1.0.0.tar.gz"), redirect.Location);
+    }
+
+    [Fact]
+    public async Task GetRedirectAsync_WithNoResponseBody_StillThrowsTheTypedException_OnAFailureStatus()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = new StringContent("""{"message":"404 Not Found"}""", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        await Assert.ThrowsAsync<GitLabNotFoundException>(() =>
+            connection.GetRedirectAsync(PagesAccessRoute, TestContext.Current.CancellationToken));
+    }
+
     /// <summary>
     ///     Captures the outgoing request while it is still alive. The connection scopes every
     ///     <see cref="HttpRequestMessage" /> with <c>using</c>, and disposing it disposes its content, so a

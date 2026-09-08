@@ -25,6 +25,33 @@
     <AdditionalFiles Include="BannedSymbols.txt"/>
   </ItemGroup>
 
+  <!--
+    Tracks the declared public API surface across releases: RS0016 flags a public member with no
+    corresponding PublicAPI.*.txt entry (an accidental breaking change or an accidentally-exposed
+    member), RS0017 flags a removed one. Deliberately scoped to this project only - it is the one
+    assembly with a public NuGet surface; tests and samples have none to track.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all"/>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt"/>
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt"/>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!--
+      RS0026/RS0027 ("do not add multiple public overloads with optional parameters" / "the overload
+      with the most parameters should have the optional ones") come bundled with PublicApiAnalyzers
+      above but are a different concern from RS0016/RS0017: they flag the "every public async method
+      takes a trailing optional-by-default CancellationToken" convention itself (see CLAUDE.md), which
+      this library applies deliberately and pervasively across IGitLabApiConnection and every
+      I<Resource>Client - e.g. GetAsync<TResponse> vs GetAsync, PostAsync<TRequest,TResponse> vs
+      PostAsync<TResponse> vs PostAsync. Those overloads differ in required parameters/arity, not in
+      an ambiguous trailing-optional set, so the rule's false-positive rate here is total rather than
+      occasional. Suppressed at the same scope PublicApiAnalyzers is added at.
+    -->
+    <NoWarn>$(NoWarn);RS0026;RS0027</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="GitLab.Client.Tests"/>
   </ItemGroup>

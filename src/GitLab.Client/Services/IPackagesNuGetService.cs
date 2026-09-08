@@ -36,6 +36,9 @@ internal interface IPackagesNuGetService
 
     Task AuthorizePackageUploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    Task UploadPackageAsync(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabNugetPackagesVersions> GetPackageVersionsAsync(ProjectId projectId, string packageName,
         CancellationToken cancellationToken = default);
 
@@ -59,12 +62,18 @@ internal interface IPackagesNuGetService
 
     Task AuthorizeSymbolPackageUploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
+    Task UploadSymbolPackageAsync(ProjectId projectId, GitLabFileUpload symbolPackage,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabFileResponse> GetV2ServiceIndexAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
 
     Task<GitLabFileResponse> GetV2MetadataAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
     Task AuthorizePackageV2UploadAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    Task UploadPackageV2Async(ProjectId projectId, GitLabFileUpload package,
+        CancellationToken cancellationToken = default);
 
     Task DeletePackageAsync(ProjectId projectId, string packageName, string packageVersion,
         CancellationToken cancellationToken = default);
@@ -74,4 +83,7 @@ internal interface IPackagesNuGetService
 
     Task<GitLabFileResponse> EnumeratePackagesAsync(ProjectId projectId, string? filter = null,
         CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> GetV2PackageMetadataAsync(ProjectId projectId, string packageName,
+        string packageVersion, CancellationToken cancellationToken = default);
 }

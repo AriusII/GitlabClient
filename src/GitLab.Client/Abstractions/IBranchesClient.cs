@@ -6,8 +6,13 @@ namespace GitLab.Client.Abstractions;
 /// <summary>Wraps the GitLab "Branches" API area (<c>/projects/:id/repository/branches</c>).</summary>
 public interface IBranchesClient
 {
+    /// <summary>Gets a single branch by name (<c>GET /projects/:id/repository/branches/:branch</c>).</summary>
     Task<GitLabBranch> GetAsync(ProjectId projectId, string branchName, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Streams a project's branches (<c>GET /projects/:id/repository/branches</c>), optionally filtered
+    ///     and sorted through <paramref name="options" />.
+    /// </summary>
     IAsyncEnumerable<GitLabBranch> ListAsync(ProjectId projectId, BranchListOptions? options = null,
         CancellationToken cancellationToken = default);
 
