@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore GitlabClient.slnx
+
+      - name: Build (Release, 0 warnings)
+        run: dotnet build GitlabClient.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test GitlabClient.slnx -c Release --no-build
+
+  aot-verify:
+    needs: build-and-test
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Add vswhere to PATH
+        # Native linking (link.exe) needs vswhere.exe discoverable on PATH, otherwise the AOT
+        # publish below fails with MSB3073 instead of producing the native exe. See CLAUDE.md.
+        shell: pwsh
+        run: echo 'C:\Program Files (x86)\Microsoft Visual Studio\Installer' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Publish AOT harness (win-x64)
+        run: dotnet publish samples/GitLab.Client.AotHarness -c Release -r win-x64

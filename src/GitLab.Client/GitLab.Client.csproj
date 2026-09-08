@@ -4,8 +4,10 @@
     <AssemblyName>GitLab.Client</AssemblyName>
     <RootNamespace>GitLab.Client</RootNamespace>
     <PackageId>GitLab.Client</PackageId>
+    <Version>1.0.0</Version>
     <Description>A fully-typed, dependency-injection-first C# client for the GitLab REST API (v4), targeting GitLab 19.x and above. Native AOT and trimming friendly.</Description>
     <PackageTags>gitlab;gitlab-api;rest;http-client;aot;native-aot</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <!-- Makes OptionsBuilder<GitLabClientOptions>.Bind(IConfiguration) interceptable by the
          Configuration Binder source generator instead of falling back to reflection - see
          AddGitLabClient(IServiceCollection, IConfiguration, string) in
@@ -70,6 +72,10 @@
     <ProjectReference Include="..\..\generators\GitLab.Client.SourceGenerators\GitLab.Client.SourceGenerators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/"/>
   </ItemGroup>
 
 </Project>
