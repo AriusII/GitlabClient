@@ -1,0 +1,6 @@
+# Default owner for everything in this repository.
+# Once branch protection on `main` requires review from Code Owners,
+# every pull request needs an approval from the owner(s) listed below
+# before it can be merged.
+
+*       @AriusII
