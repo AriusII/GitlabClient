@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Paging options for <c>GET /users/:user_id/project_deploy_keys</c>.</summary>
 [GitLabQuery]
-public sealed record UserProjectDeployKeyListOptions
+public readonly record struct UserProjectDeployKeyListOptions
 {
     /// <summary>
     ///     The first page to fetch. Listing streams every following page on its own, so this skips the pages

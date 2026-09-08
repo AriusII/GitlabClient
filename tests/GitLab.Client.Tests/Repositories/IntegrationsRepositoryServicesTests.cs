@@ -15,8 +15,11 @@ namespace GitLab.Client.Tests.Repositories;
 ///     <c>IntegrationsRepositoryETests</c> for the sibling <c>GetServiceAsync</c> /
 ///     <c>DisableServiceAsync</c> pair on that same alias). What these tests guard is that the route
 ///     goes to <c>/services</c>, not <c>/integrations</c>, and that pagination and deserialization behave
-///     exactly like the modern route.
+///     exactly like the modern route. <see cref="IntegrationsRepository.ListServicesAsync" /> is
+///     <see cref="ObsoleteAttribute" /> in favour of <see cref="IntegrationsRepository.ListAsync" />,
+///     hence the <c>CS0618</c> suppression below.
 /// </summary>
+#pragma warning disable CS0618
 public sealed class IntegrationsRepositoryServicesTests
 {
     private const string BasicIntegrationJson = """
@@ -142,3 +145,4 @@ public sealed class IntegrationsRepositoryServicesTests
         Assert.Single(integrations);
     }
 }
+#pragma warning restore CS0618

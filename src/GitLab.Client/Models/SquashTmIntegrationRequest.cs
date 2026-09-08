@@ -1,10 +1,10 @@
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Request body for <c>PUT /projects/:id/services/squash-tm</c> - GitLab's older path spelling for
-///     the Squash TM integration (requirements synchronisation with Squash Test Management).
+///     Settings for the Squash TM integration (<c>PUT /projects/:id/integrations/squash-tm</c>) -
+///     requirements synchronisation with Squash Test Management.
 /// </summary>
-public sealed record SquashTmSettingsRequest
+public sealed record SquashTmIntegrationRequest
 {
     /// <summary>URL of the Squash TM webhook.</summary>
     public required Uri Url { get; init; }

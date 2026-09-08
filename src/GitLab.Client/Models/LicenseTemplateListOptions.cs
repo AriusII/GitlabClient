@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /templates/licenses</c>.</summary>
 [GitLabQuery]
-public sealed record LicenseTemplateListOptions
+public readonly record struct LicenseTemplateListOptions
 {
     /// <summary>
     ///     When <see langword="true" />, returns only the licenses GitLab marks popular - the short list

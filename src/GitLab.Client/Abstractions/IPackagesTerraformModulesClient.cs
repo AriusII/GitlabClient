@@ -55,15 +55,49 @@ public interface IPackagesTerraformModulesClient
     /// <param name="moduleSystem">The module system (provider).</param>
     /// <param name="moduleVersion">The version to download.</param>
     /// <remarks>
-    ///     This is the GitLab-specific direct-download route (path segment <c>file</c>), not the Terraform
-    ///     Module Registry Protocol's <c>download</c> route. GitLab answers that protocol route with
-    ///     <c>204 No Content</c> and the actual archive location in an <c>X-Terraform-Get</c> response
-    ///     header rather than a body or a typed JSON field; <see cref="IGitLabApiConnection" /> has no
-    ///     overload that exposes arbitrary response headers alongside a GET body, so that route is not
-    ///     wrapped here - use this direct-download route instead.
+    ///     This is the GitLab-specific direct-download route (path segment <c>file</c>), distinct from the
+    ///     Terraform Module Registry Protocol's <c>download</c> route wrapped by
+    ///     <see cref="DownloadModuleVersionAsync(GroupId, string, string, string, CancellationToken)" /> - see
+    ///     that method's remarks for how the two differ.
     /// </remarks>
     /// <param name="cancellationToken">A token to observe while waiting for the request to complete.</param>
     Task<GitLabFileResponse> DownloadModuleVersionFileAsync(GroupId moduleNamespace, string moduleName,
+        string moduleSystem, string moduleVersion, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Retrieves the download location for the latest version of a module, through the Terraform Module
+    ///     Registry Protocol's group/instance-wide <c>download</c> route.
+    /// </summary>
+    /// <param name="moduleNamespace">The owning group, by numeric ID or full path.</param>
+    /// <param name="moduleName">The module name.</param>
+    /// <param name="moduleSystem">The module system (provider).</param>
+    /// <remarks>
+    ///     GitLab answers this protocol route with <c>204 No Content</c> and the actual archive location in
+    ///     an <c>X-Terraform-Get</c> response header rather than a body; <see cref="IGitLabApiConnection" />
+    ///     has no overload that exposes arbitrary response headers alongside a GET body, so the returned
+    ///     <see cref="GitLabFileResponse" /> carries only the status code and an empty body. Prefer
+    ///     <see cref="DownloadModuleVersionFileAsync" /> (or, for the latest version, resolve it first via
+    ///     <see cref="GetModuleAsync" />) when the archive bytes themselves are what's needed.
+    /// </remarks>
+    /// <param name="cancellationToken">A token to observe while waiting for the request to complete.</param>
+    Task<GitLabFileResponse> DownloadModuleAsync(GroupId moduleNamespace, string moduleName, string moduleSystem,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Retrieves the download location for one specific module version, through the Terraform Module
+    ///     Registry Protocol's group/instance-wide <c>download</c> route.
+    /// </summary>
+    /// <param name="moduleNamespace">The owning group, by numeric ID or full path.</param>
+    /// <param name="moduleName">The module name.</param>
+    /// <param name="moduleSystem">The module system (provider).</param>
+    /// <param name="moduleVersion">The version to resolve.</param>
+    /// <remarks>
+    ///     See <see cref="DownloadModuleAsync(GroupId, string, string, CancellationToken)" /> for the same
+    ///     <c>X-Terraform-Get</c> header caveat; use <see cref="DownloadModuleVersionFileAsync" /> instead to
+    ///     download the archive bytes directly.
+    /// </remarks>
+    /// <param name="cancellationToken">A token to observe while waiting for the request to complete.</param>
+    Task<GitLabFileResponse> DownloadModuleVersionAsync(GroupId moduleNamespace, string moduleName,
         string moduleSystem, string moduleVersion, CancellationToken cancellationToken = default);
 
     /// <summary>

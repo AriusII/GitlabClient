@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 ///     Typed settings for the <c>jenkins</c> integration - see
 ///     <see cref="GitLabIntegrationSlug.Jenkins" />.
 /// </summary>
-public sealed record JenkinsIntegrationSettings
+public sealed record JenkinsIntegrationRequest
 {
     /// <summary>Enable SSL verification. Defaults to <see langword="true" /> (enabled).</summary>
     public bool? EnableSslVerification { get; init; }

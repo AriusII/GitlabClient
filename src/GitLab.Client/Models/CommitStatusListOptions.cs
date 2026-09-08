@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/repository/commits/:sha/statuses</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record CommitStatusListOptions
+public readonly record struct CommitStatusListOptions
 {
     /// <summary>Restrict to statuses reported against this branch or tag.</summary>
     public string? Ref { get; init; }

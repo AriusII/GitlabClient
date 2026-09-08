@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Options for downloading a job's artifacts (<c>GET /projects/:id/jobs/:job_id/artifacts</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record JobArtifactDownloadOptions
+public readonly record struct JobArtifactDownloadOptions
 {
     /// <summary>
     ///     Which artifact to download. Leave unset for the job's artifacts archive, which is what GitLab

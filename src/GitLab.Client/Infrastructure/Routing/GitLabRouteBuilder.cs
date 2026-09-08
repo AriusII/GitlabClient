@@ -44,8 +44,7 @@ internal sealed class GitLabRouteBuilder
     ///     allocation from <see cref="Create" />, which runs once for every API call made through the
     ///     library. Lazily created on first use per thread; never shared across threads.
     /// </summary>
-    [ThreadStatic]
-    private static StringBuilder? t_cachedPath;
+    [ThreadStatic] private static StringBuilder? t_cachedPath;
 
     /// <summary>
     ///     Guards <see cref="t_cachedPath" /> against reentrant use on the same thread — for example a
@@ -53,11 +52,11 @@ internal sealed class GitLabRouteBuilder
     ///     still under construction. When set, <see cref="Create" /> falls back to a fresh
     ///     <see cref="StringBuilder" /> for that nested instance instead of corrupting the outer one.
     /// </summary>
-    [ThreadStatic]
-    private static bool t_cachedPathInUse;
+    [ThreadStatic] private static bool t_cachedPathInUse;
+
+    private readonly bool _ownsCachedPath;
 
     private readonly StringBuilder _path;
-    private readonly bool _ownsCachedPath;
     private bool _hasQuery;
 
     private GitLabRouteBuilder(string root)

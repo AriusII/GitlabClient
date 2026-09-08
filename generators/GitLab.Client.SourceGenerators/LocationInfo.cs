@@ -13,12 +13,9 @@ internal readonly record struct LocationInfo(string FilePath, TextSpan TextSpan,
 {
     public static LocationInfo? CreateFrom(Location? location)
     {
-        if (location?.SourceTree is null)
-        {
-            return null;
-        }
-
-        return new LocationInfo(location.SourceTree.FilePath, location.SourceSpan, location.GetLineSpan().Span);
+        return location?.SourceTree is null
+            ? null
+            : new LocationInfo(location.SourceTree.FilePath, location.SourceSpan, location.GetLineSpan().Span);
     }
 
     public static LocationInfo? CreateFrom(SyntaxNode? node)

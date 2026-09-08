@@ -13,7 +13,7 @@ namespace GitLab.Client.Models;
 ///     </para>
 /// </summary>
 [GitLabQuery]
-public sealed record AllMemberListOptions
+public readonly record struct AllMemberListOptions
 {
     /// <summary>A search term matched against member name, username and email.</summary>
     public string? Query { get; init; }

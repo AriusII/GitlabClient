@@ -11,7 +11,7 @@ namespace GitLab.Client.Models;
 ///     </para>
 /// </summary>
 [GitLabQuery]
-public sealed record ServiceAccountListOptions
+public readonly record struct ServiceAccountListOptions
 {
     /// <summary>Attribute to sort by - the account id or its username.</summary>
     public GitLabServiceAccountOrderBy? OrderBy { get; init; }

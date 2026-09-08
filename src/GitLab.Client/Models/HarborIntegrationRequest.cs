@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 ///     Typed settings for the <c>harbor</c> integration - see <see cref="GitLabIntegrationSlug.Harbor" />.
 ///     Links a project to a Harbor container registry instance.
 /// </summary>
-public sealed record HarborIntegrationSettings
+public sealed record HarborIntegrationRequest
 {
     /// <summary>
     ///     The base URL to the Harbor instance linked to the GitLab project (for example,

@@ -15,6 +15,7 @@ namespace GitLab.Client.Repositories;
 /// </summary>
 internal partial interface IIntegrationsRepository
 {
+    [Obsolete("Use the modern /integrations route instead (ListAsync).")]
     IAsyncEnumerable<GitLabIntegration> ListServicesAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
 }

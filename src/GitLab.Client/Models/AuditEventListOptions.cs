@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for the instance-wide audit log (<c>GET /audit_events</c>). Administrators only.</summary>
 [GitLabQuery]
-public sealed record AuditEventListOptions
+public readonly record struct AuditEventListOptions
 {
     /// <summary>
     ///     Restricts the log to events against this kind of entity, for example "Project" or "User".

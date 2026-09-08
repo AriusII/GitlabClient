@@ -905,6 +905,13 @@ namespace GitLab.Client.Infrastructure.Serialization;
 [JsonSerializable(typeof(GitLabPackageFile[]))]
 [JsonSerializable(typeof(AuthorizeGenericPackageFileUploadRequest))]
 [JsonSerializable(typeof(GitLabGoModuleVersionInfo))]
+// Packages: the cross-format package/package-file summary (GET .../packages, GET .../packages/:id).
+// GitLabPackageType/GitLabPackageStatus/GitLabPackageSort/GitLabPackageOrderBy/GitLabGroupPackageOrderBy
+// need no entries here - enums are covered by their owning type's metadata, not registered standalone.
+[JsonSerializable(typeof(GitLabPackage))]
+[JsonSerializable(typeof(GitLabPackage[]))]
+[JsonSerializable(typeof(GitLabPackageLinks))]
+[JsonSerializable(typeof(GitLabPackageVersion))]
 // Packages: NuGet. The V2 OData feed and symbol-file endpoints declare no JSON schema and are surfaced as
 // GitLabFileResponse, so only the V3 protocol's typed responses need metadata here.
 [JsonSerializable(typeof(GitLabNugetServiceIndex))]
@@ -960,6 +967,7 @@ namespace GitLab.Client.Infrastructure.Serialization;
 // Namespaces, Namespace projects, Organizations and the Groups audit-event/placeholder-reassignment/
 // security-settings additions.
 [JsonSerializable(typeof(GitLabNamespace[]))]
+[JsonSerializable(typeof(UpdateNamespaceRequest))]
 [JsonSerializable(typeof(GitLabNamespaceExistence))]
 [JsonSerializable(typeof(GitLabNamespaceSubscription))]
 [JsonSerializable(typeof(GitLabNamespaceSubscriptionPlan))]
@@ -1022,28 +1030,28 @@ namespace GitLab.Client.Infrastructure.Serialization;
 [JsonSerializable(typeof(GitHubIntegrationRequest))]
 [JsonSerializable(typeof(GitLabSlackApplicationIntegrationRequest))]
 // Integrations, part C: the typed per-slug settings records PUT to /projects/:id/integrations/:slug.
-[JsonSerializable(typeof(GoogleCloudPlatformArtifactRegistryIntegrationSettings))]
-[JsonSerializable(typeof(GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings))]
-[JsonSerializable(typeof(GooglePlayIntegrationSettings))]
-[JsonSerializable(typeof(HangoutsChatIntegrationSettings))]
-[JsonSerializable(typeof(HarborIntegrationSettings))]
-[JsonSerializable(typeof(IrkerIntegrationSettings))]
-[JsonSerializable(typeof(JenkinsIntegrationSettings))]
-[JsonSerializable(typeof(JiraIntegrationSettings))]
-[JsonSerializable(typeof(JiraCloudAppIntegrationSettings))]
-[JsonSerializable(typeof(LinearIntegrationSettings))]
-[JsonSerializable(typeof(MatrixIntegrationSettings))]
-[JsonSerializable(typeof(MattermostIntegrationSettings))]
-// Integrations, part E: typed settings for the /projects/:id/services/... alias (Squash TM, TeamCity,
-// Telegram, Unify Circuit, Webex Teams, YouTrack, ZenTao). Response shape is the existing
-// GitLabIntegration, already registered above.
-[JsonSerializable(typeof(SquashTmSettingsRequest))]
-[JsonSerializable(typeof(TeamCitySettingsRequest))]
-[JsonSerializable(typeof(TelegramSettingsRequest))]
-[JsonSerializable(typeof(UnifyCircuitSettingsRequest))]
-[JsonSerializable(typeof(WebexTeamsSettingsRequest))]
-[JsonSerializable(typeof(YouTrackSettingsRequest))]
-[JsonSerializable(typeof(ZentaoSettingsRequest))]
+[JsonSerializable(typeof(GoogleCloudPlatformArtifactRegistryIntegrationRequest))]
+[JsonSerializable(typeof(GoogleCloudPlatformWorkloadIdentityFederationIntegrationRequest))]
+[JsonSerializable(typeof(GooglePlayIntegrationRequest))]
+[JsonSerializable(typeof(HangoutsChatIntegrationRequest))]
+[JsonSerializable(typeof(HarborIntegrationRequest))]
+[JsonSerializable(typeof(IrkerIntegrationRequest))]
+[JsonSerializable(typeof(JenkinsIntegrationRequest))]
+[JsonSerializable(typeof(JiraIntegrationRequest))]
+[JsonSerializable(typeof(JiraCloudAppIntegrationRequest))]
+[JsonSerializable(typeof(LinearIntegrationRequest))]
+[JsonSerializable(typeof(MatrixIntegrationRequest))]
+[JsonSerializable(typeof(MattermostIntegrationRequest))]
+// Integrations, part E: typed per-slug settings records PUT to /projects/:id/integrations/:slug (Squash
+// TM, TeamCity, Telegram, Unify Circuit, Webex Teams, YouTrack, ZenTao) - same modern route as parts B
+// and C. Response shape is the existing GitLabIntegration, already registered above.
+[JsonSerializable(typeof(SquashTmIntegrationRequest))]
+[JsonSerializable(typeof(TeamCityIntegrationRequest))]
+[JsonSerializable(typeof(TelegramIntegrationRequest))]
+[JsonSerializable(typeof(UnifyCircuitIntegrationRequest))]
+[JsonSerializable(typeof(WebexTeamsIntegrationRequest))]
+[JsonSerializable(typeof(YouTrackIntegrationRequest))]
+[JsonSerializable(typeof(ZentaoIntegrationRequest))]
 // Project package protection rules, container repository protection rules, and container registry
 // protection tag rules.
 [JsonSerializable(typeof(GitLabPackageProtectionRule))]
@@ -1079,4 +1087,17 @@ namespace GitLab.Client.Infrastructure.Serialization;
 [JsonSerializable(typeof(GitLabTerraformModuleVersionsEntry))]
 [JsonSerializable(typeof(GitLabTerraformModuleVersionInfo))]
 [JsonSerializable(typeof(GitLabTerraformModuleUploadResult))]
+// Cluster agents: registrations for the GitLab agent for Kubernetes, their tokens, and receptive
+// agents' URL configurations. GitLabProjectIdentity (the agent's config_project) is already
+// registered above.
+[JsonSerializable(typeof(GitLabClusterAgent))]
+[JsonSerializable(typeof(GitLabClusterAgent[]))]
+[JsonSerializable(typeof(CreateClusterAgentRequest))]
+[JsonSerializable(typeof(GitLabClusterAgentToken))]
+[JsonSerializable(typeof(GitLabClusterAgentToken[]))]
+[JsonSerializable(typeof(GitLabClusterAgentTokenWithSecret))]
+[JsonSerializable(typeof(CreateClusterAgentTokenRequest))]
+[JsonSerializable(typeof(GitLabClusterAgentUrlConfiguration))]
+[JsonSerializable(typeof(GitLabClusterAgentUrlConfiguration[]))]
+[JsonSerializable(typeof(CreateClusterAgentUrlConfigurationRequest))]
 internal sealed partial class GitLabJsonContext : JsonSerializerContext;

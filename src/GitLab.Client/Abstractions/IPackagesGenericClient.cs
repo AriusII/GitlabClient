@@ -100,6 +100,25 @@ public interface IPackagesGenericClient
     Task<GitLabFileResponse> DownloadGoModuleSourceAsync(ProjectId projectId, string moduleName,
         string moduleVersion, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Streams every package a project holds, across every format (<c>GET /projects/:id/packages</c>) -
+    ///     the cross-format summary view, distinct from the per-format registries such as
+    ///     <see cref="IPackagesConanClient" /> or <see cref="IPackagesNuGetClient" />.
+    /// </summary>
+    IAsyncEnumerable<GitLabPackage> ListPackagesAsync(ProjectId projectId, PackageListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every package visible under a group, across every project inside it and every format
+    ///     (<c>GET /groups/:id/packages</c>).
+    /// </summary>
+    IAsyncEnumerable<GitLabPackage> ListPackagesForGroupAsync(GroupId groupId,
+        GroupPackageListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Retrieves one package by its numeric ID (<c>GET /projects/:id/packages/:package_id</c>).</summary>
+    Task<GitLabPackage> GetPackageAsync(ProjectId projectId, long packageId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Deletes a package, along with every file it owns, regardless of format.</summary>
     Task DeletePackageAsync(ProjectId projectId, long packageId, CancellationToken cancellationToken = default);
 

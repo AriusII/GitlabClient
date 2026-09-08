@@ -13,89 +13,89 @@ namespace GitLab.Client.Repositories;
 internal sealed partial class IntegrationsRepository
 {
     public Task<GitLabIntegration> SetGoogleCloudPlatformArtifactRegistryAsync(ProjectId projectId,
-        GoogleCloudPlatformArtifactRegistryIntegrationSettings settings,
+        GoogleCloudPlatformArtifactRegistryIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.GoogleCloudPlatformArtifactRegistry, settings,
-            GitLabJsonContext.Default.GoogleCloudPlatformArtifactRegistryIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.GoogleCloudPlatformArtifactRegistryIntegrationRequest, cancellationToken);
     }
 
     public Task<GitLabIntegration> SetGoogleCloudPlatformWorkloadIdentityFederationAsync(ProjectId projectId,
-        GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings settings,
+        GoogleCloudPlatformWorkloadIdentityFederationIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.GoogleCloudPlatformWorkloadIdentityFederation, settings,
-            GitLabJsonContext.Default.GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings,
+            GitLabJsonContext.Default.GoogleCloudPlatformWorkloadIdentityFederationIntegrationRequest,
             cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetGooglePlayAsync(ProjectId projectId, GooglePlayIntegrationSettings settings,
+    public Task<GitLabIntegration> SetGooglePlayAsync(ProjectId projectId, GooglePlayIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.GooglePlay, settings,
-            GitLabJsonContext.Default.GooglePlayIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.GooglePlayIntegrationRequest, cancellationToken);
     }
 
     public Task<GitLabIntegration> SetHangoutsChatAsync(ProjectId projectId,
-        HangoutsChatIntegrationSettings settings, CancellationToken cancellationToken = default)
+        HangoutsChatIntegrationRequest settings, CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.HangoutsChat, settings,
-            GitLabJsonContext.Default.HangoutsChatIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.HangoutsChatIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetHarborAsync(ProjectId projectId, HarborIntegrationSettings settings,
+    public Task<GitLabIntegration> SetHarborAsync(ProjectId projectId, HarborIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Harbor, settings,
-            GitLabJsonContext.Default.HarborIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.HarborIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetIrkerAsync(ProjectId projectId, IrkerIntegrationSettings settings,
+    public Task<GitLabIntegration> SetIrkerAsync(ProjectId projectId, IrkerIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Irker, settings,
-            GitLabJsonContext.Default.IrkerIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.IrkerIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetJenkinsAsync(ProjectId projectId, JenkinsIntegrationSettings settings,
+    public Task<GitLabIntegration> SetJenkinsAsync(ProjectId projectId, JenkinsIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Jenkins, settings,
-            GitLabJsonContext.Default.JenkinsIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.JenkinsIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetJiraAsync(ProjectId projectId, JiraIntegrationSettings settings,
+    public Task<GitLabIntegration> SetJiraAsync(ProjectId projectId, JiraIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Jira, settings,
-            GitLabJsonContext.Default.JiraIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.JiraIntegrationRequest, cancellationToken);
     }
 
     public Task<GitLabIntegration> SetJiraCloudAppAsync(ProjectId projectId,
-        JiraCloudAppIntegrationSettings settings, CancellationToken cancellationToken = default)
+        JiraCloudAppIntegrationRequest settings, CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.JiraCloudApp, settings,
-            GitLabJsonContext.Default.JiraCloudAppIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.JiraCloudAppIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetLinearAsync(ProjectId projectId, LinearIntegrationSettings settings,
+    public Task<GitLabIntegration> SetLinearAsync(ProjectId projectId, LinearIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Linear, settings,
-            GitLabJsonContext.Default.LinearIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.LinearIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetMatrixAsync(ProjectId projectId, MatrixIntegrationSettings settings,
+    public Task<GitLabIntegration> SetMatrixAsync(ProjectId projectId, MatrixIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Matrix, settings,
-            GitLabJsonContext.Default.MatrixIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.MatrixIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetMattermostAsync(ProjectId projectId, MattermostIntegrationSettings settings,
+    public Task<GitLabIntegration> SetMattermostAsync(ProjectId projectId, MattermostIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
         return SetAsync(projectId, GitLabIntegrationSlug.Mattermost, settings,
-            GitLabJsonContext.Default.MattermostIntegrationSettings, cancellationToken);
+            GitLabJsonContext.Default.MattermostIntegrationRequest, cancellationToken);
     }
 }

@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a repository tree (<c>GET /projects/:id/repository/tree</c>).</summary>
 [GitLabQuery]
-public sealed record TreeListOptions
+public readonly record struct TreeListOptions
 {
     /// <summary>Branch, tag or commit SHA to read the tree from. Defaults to the project's default branch.</summary>
     public string? Ref { get; init; }

@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Filters for <c>GET /groups/:id/transfer_locations</c> - the groups this one may be moved under.
 /// </summary>
 [GitLabQuery]
-public sealed record GroupTransferLocationListOptions
+public readonly record struct GroupTransferLocationListOptions
 {
     /// <summary>Free-text filter on the name and path.</summary>
     public string? Search { get; init; }

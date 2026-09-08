@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     current user's own snippets) and <c>GET /snippets/public</c> (every public snippet).
 /// </summary>
 [GitLabQuery]
-public sealed record SnippetListOptions
+public readonly record struct SnippetListOptions
 {
     /// <summary>Return only snippets created after this instant.</summary>
     public DateTimeOffset? CreatedAfter { get; init; }

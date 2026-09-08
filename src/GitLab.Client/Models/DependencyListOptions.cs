@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's dependencies (<c>GET /projects/:id/dependencies</c>).</summary>
 [GitLabQuery]
-public sealed record DependencyListOptions
+public readonly record struct DependencyListOptions
 {
     /// <summary>
     ///     Return only dependencies belonging to these package managers - <c>bundler</c>, <c>yarn</c>,

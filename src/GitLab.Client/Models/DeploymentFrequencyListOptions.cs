@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     nullable (GLQ0002) and these two are never omitted.
 /// </summary>
 [GitLabQuery]
-public sealed record DeploymentFrequencyListOptions
+public readonly record struct DeploymentFrequencyListOptions
 {
     /// <summary>End of the date range. Defaults to the current date when omitted.</summary>
     public string? To { get; init; }

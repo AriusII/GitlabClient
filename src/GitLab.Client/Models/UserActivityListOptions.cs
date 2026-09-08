@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /user/activities</c>.</summary>
 [GitLabQuery]
-public sealed record UserActivityListOptions
+public readonly record struct UserActivityListOptions
 {
     /// <summary>
     ///     Return only users active on or after this day. GitLab defaults to six months back when omitted,

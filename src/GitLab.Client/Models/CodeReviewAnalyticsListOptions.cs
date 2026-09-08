@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     all be nullable (GLQ0002) and it is never omitted.
 /// </summary>
 [GitLabQuery]
-public sealed record CodeReviewAnalyticsListOptions
+public readonly record struct CodeReviewAnalyticsListOptions
 {
     /// <summary>Only merge requests carrying every one of these labels.</summary>
     public IReadOnlyList<string>? LabelName { get; init; }

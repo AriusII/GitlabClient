@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     <c>GET /projects/:id/merge_trains/:target_branch</c>). Both take the identical query.
 /// </summary>
 [GitLabQuery]
-public sealed record MergeTrainListOptions
+public readonly record struct MergeTrainListOptions
 {
     /// <summary>
     ///     <c>active</c> for cars still queued, <c>complete</c> for cars that have already merged. Omitted,

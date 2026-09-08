@@ -475,7 +475,7 @@ public sealed class IntegrationsRepositoryTests
     }
 
     [Fact]
-    public async Task GetSlackOptionsAsync_PostsToTheOptionsRoute()
+    public async Task ProcessSlackOptionsAsync_PostsToTheOptionsRoute()
     {
         using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.Created));
 
@@ -483,7 +483,7 @@ public sealed class IntegrationsRepositoryTests
         GitLabApiConnection connection = new(httpClient);
         IntegrationsRepository repository = new(connection);
 
-        await repository.GetSlackOptionsAsync(TestContext.Current.CancellationToken);
+        await repository.ProcessSlackOptionsAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
         Assert.Equal("https://gitlab.example/api/v4/integrations/slack/options",

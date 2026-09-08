@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     <c>GET /projects/:id/iterations</c>; both endpoints take the identical parameter set).
 /// </summary>
 [GitLabQuery]
-public sealed record IterationListOptions
+public readonly record struct IterationListOptions
 {
     /// <summary>
     ///     Which iterations to return. A <b>string</b> on the wire, unlike the integer

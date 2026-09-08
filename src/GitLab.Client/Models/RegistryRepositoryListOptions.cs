@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Paging and inclusion filters for <c>GET /projects/:id/registry/repositories</c>.</summary>
 [GitLabQuery]
-public sealed record RegistryRepositoryListOptions
+public readonly record struct RegistryRepositoryListOptions
 {
     public int? Page { get; init; }
 

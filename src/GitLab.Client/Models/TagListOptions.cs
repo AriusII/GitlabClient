@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's tags (<c>GET /projects/:id/repository/tags</c>).</summary>
 [GitLabQuery]
-public sealed record TagListOptions
+public readonly record struct TagListOptions
 {
     public string? OrderBy { get; init; }
 

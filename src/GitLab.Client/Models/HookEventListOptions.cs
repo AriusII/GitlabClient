@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/hooks/:hook_id/events</c>, <c>GET /groups/:id/hooks/:hook_id/events</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record HookEventListOptions
+public readonly record struct HookEventListOptions
 {
     /// <summary>
     ///     Response statuses to include. Each element is either an exact HTTP status code as text

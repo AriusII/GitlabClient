@@ -6,6 +6,12 @@
     <PackageId>GitLab.Client</PackageId>
     <Description>A fully-typed, dependency-injection-first C# client for the GitLab REST API (v4), targeting GitLab 19.x and above. Native AOT and trimming friendly.</Description>
     <PackageTags>gitlab;gitlab-api;rest;http-client;aot;native-aot</PackageTags>
+    <!-- Makes OptionsBuilder<GitLabClientOptions>.Bind(IConfiguration) interceptable by the
+         Configuration Binder source generator instead of falling back to reflection - see
+         AddGitLabClient(IServiceCollection, IConfiguration, string) in
+         GitLabClientServiceCollectionExtensions. Without this, that call is IL2026/IL3050 under
+         EnableTrimAnalyzer/EnableAotAnalyzer. -->
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +19,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
     <PackageReference Include="Microsoft.Extensions.Options"/>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    <!-- IConfiguration for the appsettings-driven AddGitLabClient overload, and the
+         OptionsBuilder<GitLabClientOptions>.Bind(IConfiguration) extension it uses. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions"/>
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions"/>
   </ItemGroup>
 
   <!--

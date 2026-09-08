@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 ///     Typed settings for the <c>irker</c> integration (IRC gateway) - see
 ///     <see cref="GitLabIntegrationSlug.Irker" />.
 /// </summary>
-public sealed record IrkerIntegrationSettings
+public sealed record IrkerIntegrationRequest
 {
     /// <summary>irker daemon hostname. The default value is <c>localhost</c>.</summary>
     public string? ServerHost { get; init; }

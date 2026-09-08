@@ -1,12 +1,12 @@
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Request body for <c>PUT /projects/:id/services/unify-circuit</c> - GitLab's older path spelling
-///     for the Unify Circuit integration (post events to a Unify Circuit conversation).
+///     Settings for the Webex Teams integration (<c>PUT /projects/:id/integrations/webex-teams</c>) -
+///     post events to a Webex space.
 /// </summary>
-public sealed record UnifyCircuitSettingsRequest
+public sealed record WebexTeamsIntegrationRequest
 {
-    /// <summary>The Unify Circuit webhook (for example, <c>https://circuit.com/rest/v2/webhooks/incoming/...</c>).</summary>
+    /// <summary>The Webex Teams webhook. For example, <c>https://api.ciscospark.com/v1/webhooks/incoming/...</c>.</summary>
     public required Uri Webhook { get; init; }
 
     /// <summary>Send notifications for broken pipelines.</summary>

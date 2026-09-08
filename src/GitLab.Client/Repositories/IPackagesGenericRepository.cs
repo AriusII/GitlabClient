@@ -73,6 +73,15 @@ internal interface IPackagesGenericRepository
 
     // Format-agnostic package, package file and package pipeline management.
 
+    IAsyncEnumerable<GitLabPackage> ListPackagesAsync(ProjectId projectId, PackageListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<GitLabPackage> ListPackagesForGroupAsync(GroupId groupId,
+        GroupPackageListOptions? options = null, CancellationToken cancellationToken = default);
+
+    Task<GitLabPackage> GetPackageAsync(ProjectId projectId, long packageId,
+        CancellationToken cancellationToken = default);
+
     Task DeletePackageAsync(ProjectId projectId, long packageId, CancellationToken cancellationToken = default);
 
     IAsyncEnumerable<GitLabPackageFile> ListPackageFilesAsync(ProjectId projectId, long packageId,

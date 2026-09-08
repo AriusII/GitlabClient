@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for a group's SSH-key credentials inventory (<c>GET /groups/:id/manage/ssh_keys</c>).</summary>
 [GitLabQuery]
-public sealed record GroupManagedSshKeyListOptions
+public readonly record struct GroupManagedSshKeyListOptions
 {
     /// <summary>Return only keys created before this instant.</summary>
     public DateTimeOffset? CreatedBefore { get; init; }

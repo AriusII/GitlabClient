@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing pending invitations (<c>GET /projects/:id/invitations</c>).</summary>
 [GitLabQuery]
-public sealed record InvitationListOptions
+public readonly record struct InvitationListOptions
 {
     /// <summary>
     ///     A member search term matched against the invited email address or user name. GitLab names this

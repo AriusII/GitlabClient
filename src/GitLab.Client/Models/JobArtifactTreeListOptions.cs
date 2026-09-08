@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/jobs/:job_id/artifacts/tree</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record JobArtifactTreeListOptions
+public readonly record struct JobArtifactTreeListOptions
 {
     /// <summary>The directory inside the archive to browse. Defaults to the archive root.</summary>
     public string? Path { get; init; }

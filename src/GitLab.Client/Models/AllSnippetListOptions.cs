@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     <see cref="RepositoryStorage" />.
 /// </summary>
 [GitLabQuery]
-public sealed record AllSnippetListOptions
+public readonly record struct AllSnippetListOptions
 {
     /// <summary>Return only snippets created after this instant.</summary>
     public DateTimeOffset? CreatedAfter { get; init; }

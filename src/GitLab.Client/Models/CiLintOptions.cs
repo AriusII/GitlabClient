@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     both are marked deprecated in favour of <see cref="ContentRef" /> and <see cref="DryRunRef" />.
 /// </summary>
 [GitLabQuery]
-public sealed record CiLintOptions
+public readonly record struct CiLintOptions
 {
     /// <summary>The commit, branch or tag to read the configuration from. Defaults to the default branch's HEAD.</summary>
     public string? ContentRef { get; init; }

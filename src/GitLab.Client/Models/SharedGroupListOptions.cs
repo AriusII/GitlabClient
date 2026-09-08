@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     Filters for <c>GET /groups/:id/groups/shared</c> - the groups this group has been shared with.
 /// </summary>
 [GitLabQuery]
-public sealed record SharedGroupListOptions
+public readonly record struct SharedGroupListOptions
 {
     /// <summary>Group IDs to leave out of the result.</summary>
     public IReadOnlyList<long>? SkipGroups { get; init; }

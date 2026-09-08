@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     all be nullable (GLQ0002) and it is never omitted.
 /// </summary>
 [GitLabQuery]
-public sealed record DoraMetricsOptions
+public readonly record struct DoraMetricsOptions
 {
     /// <summary>Start of the date range, inclusive. Defaults to 3 months ago when omitted.</summary>
     public string? StartDate { get; init; }

@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     <see cref="Scope" /> is honoured only by the instance feed.
 /// </summary>
 [GitLabQuery]
-public sealed record EventListOptions
+public readonly record struct EventListOptions
 {
     /// <summary>
     ///     Widens the instance feed beyond the default - "all" for every scope. Honoured only by

@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's labels (<c>GET /projects/:id/labels</c>).</summary>
 [GitLabQuery]
-public sealed record LabelListOptions
+public readonly record struct LabelListOptions
 {
     public string? Search { get; init; }
 

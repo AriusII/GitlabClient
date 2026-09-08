@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing project topics (<c>GET /topics</c>).</summary>
 [GitLabQuery]
-public sealed record TopicListOptions
+public readonly record struct TopicListOptions
 {
     /// <summary>Return only topics matching this search text.</summary>
     public string? Search { get; init; }

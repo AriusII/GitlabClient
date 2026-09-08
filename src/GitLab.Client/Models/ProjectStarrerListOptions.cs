@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for the users who starred a project (<c>GET /projects/:id/starrers</c>).</summary>
 [GitLabQuery]
-public sealed record ProjectStarrerListOptions
+public readonly record struct ProjectStarrerListOptions
 {
     /// <summary>Return only users matching this search term.</summary>
     public string? Search { get; init; }

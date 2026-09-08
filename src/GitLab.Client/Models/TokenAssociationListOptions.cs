@@ -13,7 +13,7 @@ namespace GitLab.Client.Models;
 ///     </para>
 /// </summary>
 [GitLabQuery]
-public sealed record TokenAssociationListOptions
+public readonly record struct TokenAssociationListOptions
 {
     /// <summary>
     ///     Return only groups and projects where the token owner has at least this role: 10 (Guest),

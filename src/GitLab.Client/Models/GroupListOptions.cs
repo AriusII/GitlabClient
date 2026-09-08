@@ -5,7 +5,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Optional filters for <c>GET /groups</c>.</summary>
 [GitLabQuery]
-public sealed record GroupListOptions
+public readonly record struct GroupListOptions
 {
     public string? Search { get; init; }
 

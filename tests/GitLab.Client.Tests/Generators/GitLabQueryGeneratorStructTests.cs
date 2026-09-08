@@ -2,7 +2,6 @@ using System.Reflection;
 
 using GitLab.Client.SourceGenerators;
 
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Emit;
 
 namespace GitLab.Client.Tests.Generators;
@@ -139,7 +138,7 @@ public sealed class GitLabQueryGeneratorStructTests
             "Emit failed: " + string.Join(" | ", emitResult.Diagnostics.Select(diagnostic => diagnostic.ToString())));
 
         Assembly assembly = Assembly.Load(assemblyBytes.ToArray());
-        Type harnessType = assembly.GetType("Sample.Harness", throwOnError: true)!;
+        Type harnessType = assembly.GetType("Sample.Harness", true)!;
         MethodInfo invoke = harnessType.GetMethod("Invoke", BindingFlags.Public | BindingFlags.Static)!;
 
         object? queryString = invoke.Invoke(null, null);

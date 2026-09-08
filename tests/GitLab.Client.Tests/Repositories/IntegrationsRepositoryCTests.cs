@@ -64,7 +64,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         GitLabIntegration integration = await repository.SetGoogleCloudPlatformArtifactRegistryAsync(1,
-            new GoogleCloudPlatformArtifactRegistryIntegrationSettings
+            new GoogleCloudPlatformArtifactRegistryIntegrationRequest
             {
                 ArtifactRegistryProjectId = "my-gcp-project",
                 ArtifactRegistryRepositories = "my-repo",
@@ -92,7 +92,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetGoogleCloudPlatformWorkloadIdentityFederationAsync(1,
-            new GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings
+            new GoogleCloudPlatformWorkloadIdentityFederationIntegrationRequest
             {
                 WorkloadIdentityFederationProjectId = "my-project",
                 WorkloadIdentityFederationProjectNumber = "1234567890",
@@ -122,7 +122,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetGooglePlayAsync("group/project",
-            new GooglePlayIntegrationSettings
+            new GooglePlayIntegrationRequest
             {
                 PackageName = "com.example.app",
                 ServiceAccountKeyFileName = "key.json",
@@ -147,7 +147,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetHangoutsChatAsync(1,
-            new HangoutsChatIntegrationSettings
+            new HangoutsChatIntegrationRequest
             {
                 Webhook = new Uri("https://chat.googleapis.com/v1/spaces/AAA/messages"),
                 NotifyOnlyBrokenPipelines = true,
@@ -171,7 +171,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetHarborAsync(1,
-            new HarborIntegrationSettings
+            new HarborIntegrationRequest
             {
                 Url = new Uri("https://demo.goharbor.io"),
                 ProjectName = "testproject",
@@ -195,7 +195,7 @@ public sealed class IntegrationsRepositoryCTests
         (IntegrationsRepository repository, StubHttpMessageHandler handler, Func<string?> sentBody) =
             CreateRepository();
 
-        await repository.SetIrkerAsync(1, new IrkerIntegrationSettings { Recipients = "#gitlab, dev@example.com" },
+        await repository.SetIrkerAsync(1, new IrkerIntegrationRequest { Recipients = "#gitlab, dev@example.com" },
             TestContext.Current.CancellationToken);
 
         Assert.Equal("https://gitlab.example/api/v4/projects/1/integrations/irker",
@@ -213,7 +213,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetJenkinsAsync(1,
-            new JenkinsIntegrationSettings
+            new JenkinsIntegrationRequest
             {
                 JenkinsUrl = new Uri("http://jenkins.example.com/"),
                 ProjectName = "my_project_name",
@@ -238,7 +238,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetJiraAsync(1,
-            new JiraIntegrationSettings
+            new JiraIntegrationRequest
             {
                 Url = new Uri("https://jira.example.com"),
                 Password = "api-token",
@@ -268,7 +268,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetJiraAsync(1,
-            new JiraIntegrationSettings
+            new JiraIntegrationRequest
             {
                 Url = new Uri("https://jira.example.com"),
                 Password = "api-token",
@@ -292,7 +292,7 @@ public sealed class IntegrationsRepositoryCTests
         (IntegrationsRepository repository, StubHttpMessageHandler handler, Func<string?> sentBody) =
             CreateRepository();
 
-        await repository.SetJiraCloudAppAsync(1, new JiraCloudAppIntegrationSettings(),
+        await repository.SetJiraCloudAppAsync(1, new JiraCloudAppIntegrationRequest(),
             TestContext.Current.CancellationToken);
 
         Assert.Equal("https://gitlab.example/api/v4/projects/1/integrations/jira-cloud-app",
@@ -307,7 +307,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetJiraCloudAppAsync(1,
-            new JiraCloudAppIntegrationSettings
+            new JiraCloudAppIntegrationRequest
             {
                 JiraCloudAppServiceIds = "1001,1002",
                 JiraCloudAppEnableDeploymentGating = true,
@@ -330,7 +330,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetLinearAsync(1,
-            new LinearIntegrationSettings { WorkspaceUrl = new Uri("https://linear.app/example") },
+            new LinearIntegrationRequest { WorkspaceUrl = new Uri("https://linear.app/example") },
             TestContext.Current.CancellationToken);
 
         Assert.Equal("https://gitlab.example/api/v4/projects/1/integrations/linear",
@@ -347,7 +347,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         await repository.SetMatrixAsync(1,
-            new MatrixIntegrationSettings
+            new MatrixIntegrationRequest
             {
                 Token = "syt-zyx57W2v1u123ew11",
                 Room = "!qPKKM111FFKKsfoCVy:matrix.org",
@@ -370,7 +370,7 @@ public sealed class IntegrationsRepositoryCTests
             CreateRepository();
 
         GitLabIntegration integration = await repository.SetMattermostAsync(1,
-            new MattermostIntegrationSettings
+            new MattermostIntegrationRequest
             {
                 Webhook = new Uri("http://mattermost.example.com/hooks/xyz"),
                 Channel = "general",

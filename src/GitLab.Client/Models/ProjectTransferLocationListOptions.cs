@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/transfer_locations</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record ProjectTransferLocationListOptions
+public readonly record struct ProjectTransferLocationListOptions
 {
     /// <summary>Return only namespaces matching this search term.</summary>
     public string? Search { get; init; }

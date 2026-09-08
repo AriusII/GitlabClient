@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's feature flags (<c>GET /projects/:id/feature_flags</c>).</summary>
 [GitLabQuery]
-public sealed record FeatureFlagListOptions
+public readonly record struct FeatureFlagListOptions
 {
     /// <summary>Restricts the answer to enabled or to disabled flags. GitLab returns both when unset.</summary>
     public GitLabFeatureFlagState? Scope { get; init; }

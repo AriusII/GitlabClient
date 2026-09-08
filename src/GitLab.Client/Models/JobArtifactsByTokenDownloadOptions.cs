@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     a project and an authenticated user.
 /// </summary>
 [GitLabQuery]
-public sealed record JobArtifactsByTokenDownloadOptions
+public readonly record struct JobArtifactsByTokenDownloadOptions
 {
     /// <summary>The job's authentication token.</summary>
     public string? Token { get; init; }

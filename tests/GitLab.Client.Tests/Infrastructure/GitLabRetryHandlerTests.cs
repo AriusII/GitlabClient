@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
 
 using GitLab.Client.DependencyInjection;
 using GitLab.Client.Tests.TestSupport;
@@ -34,7 +36,8 @@ public sealed class GitLabRetryHandlerTests : IDisposable
     [Fact]
     public async Task SendAsync_RetriesOn429_UpToTheBound_ThenSurfacesTheFinalResponse()
     {
-        using RecordingHttpMessageHandler handler = new(static (_, _) => TransientFailure(HttpStatusCode.TooManyRequests));
+        using RecordingHttpMessageHandler handler = new(static (_, _) =>
+            TransientFailure(HttpStatusCode.TooManyRequests));
         using HttpClient client = CreateClient(handler);
 
         using HttpResponseMessage response = await client.GetAsync(
@@ -67,7 +70,7 @@ public sealed class GitLabRetryHandlerTests : IDisposable
     {
         foreach (HttpStatusCode statusCode in new[]
                  {
-                     HttpStatusCode.BadGateway, HttpStatusCode.ServiceUnavailable, HttpStatusCode.GatewayTimeout,
+                     HttpStatusCode.BadGateway, HttpStatusCode.ServiceUnavailable, HttpStatusCode.GatewayTimeout
                  })
         {
             using RecordingHttpMessageHandler handler = new((_, requestIndex) =>
@@ -109,7 +112,7 @@ public sealed class GitLabRetryHandlerTests : IDisposable
             }
 
             HttpResponseMessage response = TransientFailure(HttpStatusCode.TooManyRequests);
-            response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(
+            response.Headers.RetryAfter = new RetryConditionHeaderValue(
                 TimeSpan.FromSeconds(1));
             return response;
         });
@@ -135,7 +138,8 @@ public sealed class GitLabRetryHandlerTests : IDisposable
         // send, unlike the ByteArrayContent/JsonContent bodies every other write path in this library uses -
         // see GitLabRetryHandler.TryReuseContent. A single transient response must therefore pass straight
         // through unretried.
-        using RecordingHttpMessageHandler handler = new(static (_, _) => TransientFailure(HttpStatusCode.ServiceUnavailable));
+        using RecordingHttpMessageHandler handler = new(static (_, _) =>
+            TransientFailure(HttpStatusCode.ServiceUnavailable));
         using HttpClient client = CreateClient(handler);
 
         using MemoryStream body = new("{}"u8.ToArray());
@@ -156,7 +160,7 @@ public sealed class GitLabRetryHandlerTests : IDisposable
             requestIndex == 0 ? TransientFailure(HttpStatusCode.ServiceUnavailable) : Ok());
         using HttpClient client = CreateClient(handler);
 
-        using StringContent content = new("{\"name\":\"hook\"}", System.Text.Encoding.UTF8, "application/json");
+        using StringContent content = new("{\"name\":\"hook\"}", Encoding.UTF8, "application/json");
         using HttpResponseMessage response = await client.PostAsync(
             new Uri("projects/1/hooks", UriKind.Relative), content, TestContext.Current.CancellationToken);
 

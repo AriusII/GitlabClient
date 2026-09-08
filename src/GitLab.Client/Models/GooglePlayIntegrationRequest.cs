@@ -5,7 +5,7 @@ namespace GitLab.Client.Models;
 ///     <see cref="GitLabIntegrationSlug.GooglePlay" />. Uploads build artifacts from CI/CD to the
 ///     Google Play console using a service account key.
 /// </summary>
-public sealed record GooglePlayIntegrationSettings
+public sealed record GooglePlayIntegrationRequest
 {
     /// <summary>Package name of the app in Google Play.</summary>
     public required string PackageName { get; init; }

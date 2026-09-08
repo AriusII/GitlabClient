@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's branches (<c>GET /projects/:id/repository/branches</c>).</summary>
 [GitLabQuery]
-public sealed record BranchListOptions
+public readonly record struct BranchListOptions
 {
     /// <summary>Substring match on the branch name.</summary>
     public string? Search { get; init; }

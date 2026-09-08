@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters and pagination for <c>GET /admin/data_management/:model_name</c>.</summary>
 [GitLabQuery]
-public sealed record AdminModelListOptions
+public readonly record struct AdminModelListOptions
 {
     public int? Page { get; init; }
 

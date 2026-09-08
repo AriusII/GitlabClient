@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     set GitLab declares identically for all three.
 /// </summary>
 [GitLabQuery]
-public sealed record DeployTokenListOptions
+public readonly record struct DeployTokenListOptions
 {
     /// <summary>
     ///     Return only active tokens (<see langword="true" />), or only revoked and expired ones

@@ -21,6 +21,17 @@ public interface INamespacesClient
     Task<GitLabNamespace> GetAsync(GroupId namespaceId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Sets a namespace's compute-minutes, storage and subscription attributes (<c>PUT /namespaces/:id</c>).
+    ///     GitLab has deprecated this endpoint since 17.8 in favour of the Customers Portal, but it remains
+    ///     the only REST API way to set these fields directly.
+    /// </summary>
+    /// <param name="namespaceId">The namespace to update, by numeric ID or URL-encoded full path.</param>
+    /// <param name="request">The attributes to set.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the request to complete.</param>
+    Task<GitLabNamespace> UpdateAsync(GroupId namespaceId, UpdateNamespaceRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Checks whether <paramref name="path" /> is still available for a new namespace
     ///     (<c>GET /namespaces/:id/exists</c>) - unlike every other method here, <paramref name="path" />
     ///     is a candidate path being tested, not necessarily an existing namespace.

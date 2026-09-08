@@ -6,101 +6,81 @@ using GitLab.Client.Models;
 namespace GitLab.Client.Repositories;
 
 /// <summary>
-///     Part E of the Integrations repository - see <see cref="IIntegrationsRepository" />'s part-E
-///     declaration for what this file covers.
+///     Part E of the Integrations repository: typed setters for Squash TM, TeamCity, Telegram, Unify
+///     Circuit, Webex Teams, YouTrack and ZenTao. These seven used to be wrapped only through GitLab's
+///     older <c>/projects/:id/services/:slug</c> alias - the exact alias the primary partial's own
+///     remarks say is deliberately not wrapped, since it would double the surface for nothing. They now
+///     go through the same generic
+///     <c>
+///         SetAsync{TSettings}(ProjectId, string, TSettings,
+///         JsonTypeInfo{TSettings}, CancellationToken)
+///     </c>
+///     the B and C partials use, reaching the modern
+///     <c>/projects/:id/integrations/:slug</c> route (see <c>IIntegrationsRepository.B.cs</c> /
+///     <c>IIntegrationsRepository.C.cs</c> for the pattern this follows). Also carries the slug-generic
+///     <see cref="GetServiceAsync" /> and <see cref="DisableServiceAsync" /> pair, which still exercise
+///     the <c>/services</c> alias directly and are the only reason the <see cref="Services" /> path word
+///     survives in this class.
 /// </summary>
 internal sealed partial class IntegrationsRepository
 {
     /// <summary>
     ///     The fixed path word GitLab's older, still-served alias for this whole resource is built on -
-    ///     see the remarks on the primary partial declaration of this class for why both spellings exist.
+    ///     kept only for <see cref="GetServiceAsync" />/<see cref="DisableServiceAsync" /> now that the
+    ///     seven per-slug setters below address the modern <c>/integrations</c> route instead.
     /// </summary>
     private const string Services = "services";
 
-    public Task<GitLabIntegration> SetSquashTmAsync(ProjectId projectId, SquashTmSettingsRequest settings,
+    public Task<GitLabIntegration> SetSquashTmAsync(ProjectId projectId, SquashTmIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.SquashTm).Build(),
-            settings,
-            GitLabJsonContext.Default.SquashTmSettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.SquashTm, settings,
+            GitLabJsonContext.Default.SquashTmIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetTeamCityAsync(ProjectId projectId, TeamCitySettingsRequest settings,
+    public Task<GitLabIntegration> SetTeamCityAsync(ProjectId projectId, TeamCityIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.TeamCity).Build(),
-            settings,
-            GitLabJsonContext.Default.TeamCitySettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.TeamCity, settings,
+            GitLabJsonContext.Default.TeamCityIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetTelegramAsync(ProjectId projectId, TelegramSettingsRequest settings,
+    public Task<GitLabIntegration> SetTelegramAsync(ProjectId projectId, TelegramIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.Telegram).Build(),
-            settings,
-            GitLabJsonContext.Default.TelegramSettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.Telegram, settings,
+            GitLabJsonContext.Default.TelegramIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetUnifyCircuitAsync(ProjectId projectId, UnifyCircuitSettingsRequest settings,
+    public Task<GitLabIntegration> SetUnifyCircuitAsync(ProjectId projectId, UnifyCircuitIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.UnifyCircuit).Build(),
-            settings,
-            GitLabJsonContext.Default.UnifyCircuitSettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.UnifyCircuit, settings,
+            GitLabJsonContext.Default.UnifyCircuitIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetWebexTeamsAsync(ProjectId projectId, WebexTeamsSettingsRequest settings,
+    public Task<GitLabIntegration> SetWebexTeamsAsync(ProjectId projectId, WebexTeamsIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.WebexTeams).Build(),
-            settings,
-            GitLabJsonContext.Default.WebexTeamsSettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.WebexTeams, settings,
+            GitLabJsonContext.Default.WebexTeamsIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetYouTrackAsync(ProjectId projectId, YouTrackSettingsRequest settings,
+    public Task<GitLabIntegration> SetYouTrackAsync(ProjectId projectId, YouTrackIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.YouTrack).Build(),
-            settings,
-            GitLabJsonContext.Default.YouTrackSettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.YouTrack, settings,
+            GitLabJsonContext.Default.YouTrackIntegrationRequest, cancellationToken);
     }
 
-    public Task<GitLabIntegration> SetZentaoAsync(ProjectId projectId, ZentaoSettingsRequest settings,
+    public Task<GitLabIntegration> SetZentaoAsync(ProjectId projectId, ZentaoIntegrationRequest settings,
         CancellationToken cancellationToken = default)
     {
-        return connection.PutAsync(
-            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal(Services)
-                .Literal(GitLabIntegrationSlug.Zentao).Build(),
-            settings,
-            GitLabJsonContext.Default.ZentaoSettingsRequest,
-            GitLabJsonContext.Default.GitLabIntegration,
-            cancellationToken);
+        return SetAsync(projectId, GitLabIntegrationSlug.Zentao, settings,
+            GitLabJsonContext.Default.ZentaoIntegrationRequest, cancellationToken);
     }
 
+    [Obsolete("Use the modern /integrations route instead (GetAsync).")]
     public Task<GitLabIntegration> GetServiceAsync(ProjectId projectId, string slug,
         CancellationToken cancellationToken = default)
     {
@@ -110,6 +90,7 @@ internal sealed partial class IntegrationsRepository
             cancellationToken);
     }
 
+    [Obsolete("Use the modern /integrations route instead (DisableAsync).")]
     public Task DisableServiceAsync(ProjectId projectId, string slug, CancellationToken cancellationToken = default)
     {
         return connection.DeleteAsync(ProjectServiceRoute(projectId, slug), cancellationToken);

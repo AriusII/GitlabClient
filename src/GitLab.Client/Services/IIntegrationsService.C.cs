@@ -11,40 +11,40 @@ namespace GitLab.Client.Services;
 internal partial interface IIntegrationsService
 {
     Task<GitLabIntegration> SetGoogleCloudPlatformArtifactRegistryAsync(ProjectId projectId,
-        GoogleCloudPlatformArtifactRegistryIntegrationSettings settings,
+        GoogleCloudPlatformArtifactRegistryIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
     Task<GitLabIntegration> SetGoogleCloudPlatformWorkloadIdentityFederationAsync(ProjectId projectId,
-        GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings settings,
+        GoogleCloudPlatformWorkloadIdentityFederationIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetGooglePlayAsync(ProjectId projectId, GooglePlayIntegrationSettings settings,
+    Task<GitLabIntegration> SetGooglePlayAsync(ProjectId projectId, GooglePlayIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetHangoutsChatAsync(ProjectId projectId, HangoutsChatIntegrationSettings settings,
+    Task<GitLabIntegration> SetHangoutsChatAsync(ProjectId projectId, HangoutsChatIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetHarborAsync(ProjectId projectId, HarborIntegrationSettings settings,
+    Task<GitLabIntegration> SetHarborAsync(ProjectId projectId, HarborIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetIrkerAsync(ProjectId projectId, IrkerIntegrationSettings settings,
+    Task<GitLabIntegration> SetIrkerAsync(ProjectId projectId, IrkerIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetJenkinsAsync(ProjectId projectId, JenkinsIntegrationSettings settings,
+    Task<GitLabIntegration> SetJenkinsAsync(ProjectId projectId, JenkinsIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetJiraAsync(ProjectId projectId, JiraIntegrationSettings settings,
+    Task<GitLabIntegration> SetJiraAsync(ProjectId projectId, JiraIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetJiraCloudAppAsync(ProjectId projectId, JiraCloudAppIntegrationSettings settings,
+    Task<GitLabIntegration> SetJiraCloudAppAsync(ProjectId projectId, JiraCloudAppIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetLinearAsync(ProjectId projectId, LinearIntegrationSettings settings,
+    Task<GitLabIntegration> SetLinearAsync(ProjectId projectId, LinearIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetMatrixAsync(ProjectId projectId, MatrixIntegrationSettings settings,
+    Task<GitLabIntegration> SetMatrixAsync(ProjectId projectId, MatrixIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetMattermostAsync(ProjectId projectId, MattermostIntegrationSettings settings,
+    Task<GitLabIntegration> SetMattermostAsync(ProjectId projectId, MattermostIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 }

@@ -13,7 +13,7 @@ internal partial interface IIntegrationsRepository
 
     Task ProcessSlackInteractionAsync(CancellationToken cancellationToken = default);
 
-    Task GetSlackOptionsAsync(CancellationToken cancellationToken = default);
+    Task ProcessSlackOptionsAsync(CancellationToken cancellationToken = default);
 
     Task TriggerSlackCommandAsync(TriggerSlackCommandRequest request,
         CancellationToken cancellationToken = default);

@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /ai/duo_workflows/workflows/:id/checkpoints</c>.</summary>
 [GitLabQuery]
-public sealed record DuoWorkflowCheckpointListOptions
+public readonly record struct DuoWorkflowCheckpointListOptions
 {
     /// <summary>Return checkpoints zlib-compressed and base64-encoded rather than inline.</summary>
     public bool? AcceptCompressed { get; init; }

@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's environments (<c>GET /projects/:id/environments</c>).</summary>
 [GitLabQuery]
-public sealed record EnvironmentListOptions
+public readonly record struct EnvironmentListOptions
 {
     /// <summary>Return the environment with this exact name.</summary>
     public string? Name { get; init; }

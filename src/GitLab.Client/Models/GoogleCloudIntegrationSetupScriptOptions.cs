@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     surface (<c>x-gitlab-lifecycle: experiment</c> in the spec).
 /// </summary>
 [GitLabQuery]
-public sealed record GoogleCloudIntegrationSetupScriptOptions
+public readonly record struct GoogleCloudIntegrationSetupScriptOptions
 {
     /// <summary>Whether the generated script should also enable the Google Artifact Management integration.</summary>
     public bool? EnableGoogleCloudArtifactRegistry { get; init; }

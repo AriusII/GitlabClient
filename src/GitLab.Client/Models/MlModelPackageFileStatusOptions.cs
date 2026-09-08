@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Options for downloading an ml_model package file (<c>GET .../packages/ml_models/:model_version_id/files/...</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record MlModelPackageFileStatusOptions
+public readonly record struct MlModelPackageFileStatusOptions
 {
     /// <summary>
     ///     Restricts the download to a file published with this status. GitLab defaults to serving

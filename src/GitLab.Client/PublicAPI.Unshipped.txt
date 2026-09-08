@@ -1,1 +1,2 @@
 #nullable enable
+static Microsoft.Extensions.DependencyInjection.GitLabClientServiceCollectionExtensions.AddGitLabClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, string! sectionName = "GitLab") -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!

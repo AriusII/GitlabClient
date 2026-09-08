@@ -13,7 +13,7 @@ namespace GitLab.Client.Models;
 ///     </para>
 /// </summary>
 [GitLabQuery]
-public sealed record UserPipelineListOptions
+public readonly record struct UserPipelineListOptions
 {
     /// <summary>
     ///     What started the pipeline - "push", "web", "trigger", "schedule", "api", "external", "pipeline",

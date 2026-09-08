@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     apps for deletion. GitLab takes them as query parameters rather than a body.
 /// </summary>
 [GitLabQuery]
-public sealed record ReviewAppDeletionOptions
+public readonly record struct ReviewAppDeletionOptions
 {
     /// <summary>The date before which stopped review apps can be deleted. GitLab defaults to 30 days ago.</summary>
     public DateTimeOffset? Before { get; init; }

@@ -30,11 +30,13 @@ public partial interface IIntegrationsClient
     Task ProcessSlackInteractionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Asks GitLab for the options of a Slack interactive component
-    ///     (<c>POST /integrations/slack/options</c>). As with the interactions endpoint, the spec declares
-    ///     neither a request nor a response body.
+    ///     Processes a Slack interactive-component options-load request
+    ///     (<c>POST /integrations/slack/options</c>): Slack calls this to populate a dynamic select
+    ///     menu. Named for the verb the spec actually uses (<c>POST</c>, not <c>GET</c>) rather than for
+    ///     "options", which reads as a query rather than the callback it is. As with the interactions
+    ///     endpoint, the spec declares neither a request nor a response body.
     /// </summary>
-    Task GetSlackOptionsAsync(CancellationToken cancellationToken = default);
+    Task ProcessSlackOptionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Runs a global GitLab slash command from Slack (<c>POST /slack/trigger</c>), routed through the

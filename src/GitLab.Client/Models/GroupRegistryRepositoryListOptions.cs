@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     listing, GitLab does not declare <c>tags</c>/<c>tags_count</c> inclusion flags on this route.
 /// </summary>
 [GitLabQuery]
-public sealed record GroupRegistryRepositoryListOptions
+public readonly record struct GroupRegistryRepositoryListOptions
 {
     public int? Page { get; init; }
 

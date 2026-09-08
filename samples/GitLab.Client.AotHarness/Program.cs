@@ -4,14 +4,30 @@
 
 using GitLab.Client.Abstractions;
 using GitLab.Client.Abstractions.Exceptions;
+using GitLab.Client.DependencyInjection;
 using GitLab.Client.Models;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
+IConfiguration configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", true)
+    .AddEnvironmentVariables()
+    .Build();
 
 ServiceCollection services = new();
 
-services.AddGitLabClient(options =>
-    options.AccessToken = Environment.GetEnvironmentVariable("GITLAB_TOKEN") ?? "glpat-example-token");
+services.AddGitLabClient(configuration);
+
+// appsettings.json ships with an empty AccessToken so the file can be committed; fall back to
+// GITLAB_TOKEN (and finally a placeholder) whenever the bound configuration didn't supply one.
+services.PostConfigure<GitLabClientOptions>(options =>
+{
+    if (string.IsNullOrEmpty(options.AccessToken))
+    {
+        options.AccessToken = Environment.GetEnvironmentVariable("GITLAB_TOKEN") ?? "glpat-example-token";
+    }
+});
 
 await using ServiceProvider provider = services.BuildServiceProvider();
 

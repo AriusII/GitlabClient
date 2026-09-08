@@ -159,6 +159,33 @@ internal sealed class PackagesGenericRepository(IGitLabApiConnection connection)
 
     // Format-agnostic package, package file and package pipeline management.
 
+    public IAsyncEnumerable<GitLabPackage> ListPackagesAsync(ProjectId projectId,
+        PackageListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return connection.GetPagedAsync(
+            GitLabRouteBuilder.Create("projects").Segment(projectId).Literal("packages").QueryFrom(options).Build(),
+            GitLabJsonContext.Default.GitLabPackageArray,
+            cancellationToken);
+    }
+
+    public IAsyncEnumerable<GitLabPackage> ListPackagesForGroupAsync(GroupId groupId,
+        GroupPackageListOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        return connection.GetPagedAsync(
+            GitLabRouteBuilder.Create("groups").Segment(groupId).Literal("packages").QueryFrom(options).Build(),
+            GitLabJsonContext.Default.GitLabPackageArray,
+            cancellationToken);
+    }
+
+    public Task<GitLabPackage> GetPackageAsync(ProjectId projectId, long packageId,
+        CancellationToken cancellationToken = default)
+    {
+        return connection.GetAsync(
+            PackageRoute(projectId, packageId).Build(),
+            GitLabJsonContext.Default.GitLabPackage,
+            cancellationToken);
+    }
+
     public Task DeletePackageAsync(ProjectId projectId, long packageId,
         CancellationToken cancellationToken = default)
     {

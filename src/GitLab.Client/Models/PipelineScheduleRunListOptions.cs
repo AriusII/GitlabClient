@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/pipeline_schedules/:pipeline_schedule_id/pipelines</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record PipelineScheduleRunListOptions
+public readonly record struct PipelineScheduleRunListOptions
 {
     /// <summary>Pipeline scope - "running", "pending", "finished", "branches" or "tags".</summary>
     public string? Scope { get; init; }

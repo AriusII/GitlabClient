@@ -12,7 +12,7 @@ namespace GitLab.Client.Models;
 ///     listing is harmless but has no effect.
 /// </remarks>
 [GitLabQuery]
-public sealed record BulkImportEntityListOptions
+public readonly record struct BulkImportEntityListOptions
 {
     /// <summary>Return entities sorted by creation time. GitLab defaults to newest first.</summary>
     public GitLabBulkImportSort? Sort { get; init; }

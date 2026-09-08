@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /projects/:id/ai_agent/sessions</c>.</summary>
 [GitLabQuery]
-public sealed record AgentSessionListOptions
+public readonly record struct AgentSessionListOptions
 {
     /// <summary>Return only sessions run by this agent.</summary>
     public GitLabAgentType? AgentType { get; init; }

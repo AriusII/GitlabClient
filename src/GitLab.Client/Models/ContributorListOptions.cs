@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for contributor metrics (<c>GET /projects/:id/repository/contributors</c>).</summary>
 [GitLabQuery]
-public sealed record ContributorListOptions
+public readonly record struct ContributorListOptions
 {
     /// <summary>Branch or tag to count commits on. Defaults to the project's default branch.</summary>
     public string? Ref { get; init; }

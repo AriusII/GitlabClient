@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Filters for listing a group's protected branches (<c>GET /groups/:id/protected_branches</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record GroupProtectedBranchListOptions
+public readonly record struct GroupProtectedBranchListOptions
 {
     /// <summary>Return only protected branches whose name matches this text.</summary>
     public string? Search { get; init; }

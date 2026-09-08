@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     descending and capped at 20 per page.
 /// </summary>
 [GitLabQuery]
-public sealed record PackagePipelineListOptions
+public readonly record struct PackagePipelineListOptions
 {
     public int? Page { get; init; }
 

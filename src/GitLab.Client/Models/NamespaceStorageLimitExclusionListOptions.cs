@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Pagination for <c>GET /namespaces/storage/limit_exclusions</c>.</summary>
 [GitLabQuery]
-public sealed record NamespaceStorageLimitExclusionListOptions
+public readonly record struct NamespaceStorageLimitExclusionListOptions
 {
     public int? Page { get; init; }
 

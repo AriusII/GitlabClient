@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     Administrators and group owners only.
 /// </summary>
 [GitLabQuery]
-public sealed record EnterpriseUserListOptions
+public readonly record struct EnterpriseUserListOptions
 {
     /// <summary>Return the single enterprise user with exactly this username.</summary>
     public string? Username { get; init; }

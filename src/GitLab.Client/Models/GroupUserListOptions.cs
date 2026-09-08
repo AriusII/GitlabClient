@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     <c>GET /groups/:id/saml_users</c>. Both are Premium features on a top-level group.
 /// </summary>
 [GitLabQuery]
-public sealed record GroupUserListOptions
+public readonly record struct GroupUserListOptions
 {
     /// <summary>Exact username match.</summary>
     public string? Username { get; init; }

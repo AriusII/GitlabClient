@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Filters for <c>GET /groups/:id/billable_members</c>.
 /// </summary>
 [GitLabQuery]
-public sealed record GroupBillableMemberListOptions
+public readonly record struct GroupBillableMemberListOptions
 {
     /// <summary>Free-text filter on the member's name.</summary>
     public string? Search { get; init; }

@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     GitLab.com rate-limits this endpoint to five requests a minute.
 /// </summary>
 [GitLabQuery]
-public sealed record RepositoryArchiveOptions
+public readonly record struct RepositoryArchiveOptions
 {
     /// <summary>The commit SHA, branch or tag to archive. GitLab uses the default branch when unset.</summary>
     public string? Sha { get; init; }

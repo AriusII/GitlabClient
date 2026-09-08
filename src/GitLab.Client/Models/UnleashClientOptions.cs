@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     "connected clients" view has something to show; neither is required to get an answer.
 /// </summary>
 [GitLabQuery]
-public sealed record UnleashClientOptions
+public readonly record struct UnleashClientOptions
 {
     /// <summary>The Unleash client's instance ID.</summary>
     public string? InstanceId { get; init; }

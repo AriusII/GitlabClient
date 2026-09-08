@@ -29,6 +29,12 @@ internal interface IPackagesTerraformModulesRepository
     Task<GitLabFileResponse> DownloadModuleVersionFileAsync(GroupId moduleNamespace, string moduleName,
         string moduleSystem, string moduleVersion, CancellationToken cancellationToken = default);
 
+    Task<GitLabFileResponse> DownloadModuleAsync(GroupId moduleNamespace, string moduleName, string moduleSystem,
+        CancellationToken cancellationToken = default);
+
+    Task<GitLabFileResponse> DownloadModuleVersionAsync(GroupId moduleNamespace, string moduleName,
+        string moduleSystem, string moduleVersion, CancellationToken cancellationToken = default);
+
     Task<GitLabFileResponse> DownloadLatestModuleAsync(ProjectId projectId, string moduleName, string moduleSystem,
         bool? terraformGet = null, CancellationToken cancellationToken = default);
 

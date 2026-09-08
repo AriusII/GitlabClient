@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing the jobs a runner has processed (<c>GET /runners/:id/jobs</c>).</summary>
 [GitLabQuery]
-public sealed record RunnerJobListOptions
+public readonly record struct RunnerJobListOptions
 {
     /// <summary>
     ///     Job status - "created", "waiting_for_resource", "preparing", "waiting_for_callback", "pending",

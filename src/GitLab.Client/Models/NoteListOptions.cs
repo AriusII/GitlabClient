@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     parameters on all seven noteable types, so one options record covers them all.
 /// </summary>
 [GitLabQuery]
-public sealed record NoteListOptions
+public readonly record struct NoteListOptions
 {
     /// <summary>Either "created_at" or "updated_at". GitLab defaults to "created_at".</summary>
     public string? OrderBy { get; init; }

@@ -44,6 +44,24 @@ public sealed class PackagesGenericRepositoryTests
                                            }
                                            """;
 
+    private const string PackageJson = """
+                                       {
+                                         "id": 1,
+                                         "name": "com/mycompany/my-app",
+                                         "version": "1.0-SNAPSHOT",
+                                         "package_type": "maven",
+                                         "status": "default",
+                                         "_links": {
+                                           "web_path": "/root/my-company/app-project/-/packages/1",
+                                           "delete_api_path": "/api/v4/projects/1/packages/1"
+                                         },
+                                         "created_at": "2019-11-27T03:37:38.711Z",
+                                         "project_id": 1,
+                                         "project_path": "my-company/app-project",
+                                         "tags": ""
+                                       }
+                                       """;
+
     private static readonly Uri BaseAddress = new("https://gitlab.example/api/v4/");
 
     private static readonly byte[] FileBytes = [0x50, 0x4B, 0x03, 0x04];
@@ -480,6 +498,103 @@ public sealed class PackagesGenericRepositoryTests
             + "@v/v1.0.0.zip",
             handler.LastRequest?.RequestUri?.AbsoluteUri);
         Assert.Equal(HttpStatusCode.OK, file.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListPackagesAsync_BuildsTheQueryString_AndDeserializesThePackageSummary()
+    {
+        string json = $"[{PackageJson}]";
+
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesGenericRepository repository = new(connection);
+
+        PackageListOptions options = new()
+        {
+            OrderBy = GitLabPackageOrderBy.Version,
+            Sort = GitLabPackageSort.Desc,
+            PackageType = GitLabPackageType.Maven
+        };
+
+        List<GitLabPackage> packages = [];
+        await foreach (GitLabPackage package in
+                       repository.ListPackagesAsync(1, options, TestContext.Current.CancellationToken))
+        {
+            packages.Add(package);
+        }
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/projects/1/packages?order_by=version&sort=desc&package_type=maven",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        GitLabPackage only = Assert.Single(packages);
+        Assert.Equal(1, only.Id);
+        Assert.Equal("com/mycompany/my-app", only.Name);
+        Assert.Equal("1.0-SNAPSHOT", only.Version);
+        Assert.Equal(GitLabPackageType.Maven, only.PackageType);
+        Assert.Equal(GitLabPackageStatus.Default, only.Status);
+        Assert.Equal("/root/my-company/app-project/-/packages/1", only.Links?.WebPath);
+        Assert.Equal("my-company/app-project", only.ProjectPath);
+    }
+
+    [Fact]
+    public async Task ListPackagesForGroupAsync_BuildsTheGroupRoute_WithExcludeSubgroupsAndOrderBy()
+    {
+        string json = $"[{PackageJson}]";
+
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesGenericRepository repository = new(connection);
+
+        GroupPackageListOptions options = new()
+        {
+            ExcludeSubgroups = true, OrderBy = GitLabGroupPackageOrderBy.ProjectPath
+        };
+
+        List<GitLabPackage> packages = [];
+        await foreach (GitLabPackage package in
+                       repository.ListPackagesForGroupAsync(9, options, TestContext.Current.CancellationToken))
+        {
+            packages.Add(package);
+        }
+
+        Assert.Equal(
+            "https://gitlab.example/api/v4/groups/9/packages?exclude_subgroups=true&order_by=project_path",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+
+        Assert.Single(packages);
+    }
+
+    [Fact]
+    public async Task GetPackageAsync_BuildsThePackageRoute_AndDeserializesTheLinksObject()
+    {
+        (HttpClient httpClient, StubHttpMessageHandler handler) = CreateClient(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(PackageJson, Encoding.UTF8, "application/json")
+            });
+
+        GitLabApiConnection connection = new(httpClient);
+        PackagesGenericRepository repository = new(connection);
+
+        GitLabPackage package = await repository.GetPackageAsync(1, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/projects/1/packages/1",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal("1.0-SNAPSHOT", package.Version);
+        Assert.Equal("/api/v4/projects/1/packages/1", package.Links?.DeleteApiPath);
     }
 
     [Fact]

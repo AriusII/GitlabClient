@@ -159,6 +159,46 @@ public sealed class PackagesTerraformModulesRepositoryTests
     }
 
     [Fact]
+    public async Task DownloadModuleAsync_BuildsTheGroupScopedDownloadRoute()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesTerraformModulesRepository repository = new(connection);
+
+        using GitLabFileResponse file = await repository.DownloadModuleAsync(
+            42, "hello-world", "local", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/packages/terraform/modules/v1/42/hello-world/local/download",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(HttpStatusCode.NoContent, file.StatusCode);
+    }
+
+    [Fact]
+    public async Task DownloadModuleVersionAsync_ForAGroup_AddressesOneVersionThroughTheDownloadRoute()
+    {
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+        PackagesTerraformModulesRepository repository = new(connection);
+
+        using GitLabFileResponse file = await repository.DownloadModuleVersionAsync(
+            GroupId.FromPath("group/subgroup"), "hello/world", "my system", "1.0.0",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest?.Method);
+        Assert.Equal(
+            "https://gitlab.example/api/v4/packages/terraform/modules/v1/group%2Fsubgroup/hello%2Fworld/"
+            + "my%20system/1.0.0/download",
+            handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(HttpStatusCode.NoContent, file.StatusCode);
+    }
+
+    [Fact]
     public async Task DownloadLatestModuleAsync_BuildsTheProjectScopedRoute_AndOmitsTheFlagByDefault()
     {
         using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)

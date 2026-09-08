@@ -1,25 +1,13 @@
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Typed settings for the <c>matrix</c> integration - see
-///     <see cref="GitLabIntegrationSlug.Matrix" />.
+///     Settings for the Unify Circuit integration (<c>PUT /projects/:id/integrations/unify-circuit</c>)
+///     - post events to a Unify Circuit conversation.
 /// </summary>
-public sealed record MatrixIntegrationSettings
+public sealed record UnifyCircuitIntegrationRequest
 {
-    /// <summary>
-    ///     Custom hostname of the Matrix server. The default value is
-    ///     <c>https://matrix-client.matrix.org</c>.
-    /// </summary>
-    public Uri? Hostname { get; init; }
-
-    /// <summary>The Matrix access token (for example, <c>syt-zyx57W2v1u123ew11</c>).</summary>
-    public required string Token { get; init; }
-
-    /// <summary>
-    ///     Unique identifier for the target room (in the format
-    ///     <c>!qPKKM111FFKKsfoCVy:matrix.org</c>).
-    /// </summary>
-    public required string Room { get; init; }
+    /// <summary>The Unify Circuit webhook (for example, <c>https://circuit.com/rest/v2/webhooks/incoming/...</c>).</summary>
+    public required Uri Webhook { get; init; }
 
     /// <summary>Send notifications for broken pipelines.</summary>
     public bool? NotifyOnlyBrokenPipelines { get; init; }
@@ -28,8 +16,8 @@ public sealed record MatrixIntegrationSettings
     public bool? NotifyOnlyWhenPipelineStatusChanges { get; init; }
 
     /// <summary>
-    ///     Branches to send notifications for. Valid values are <c>all</c>, <c>default</c>,
-    ///     <c>protected</c>, and <c>default_and_protected</c>.
+    ///     Branches to send notifications for. Valid options are <c>all</c>, <c>default</c>,
+    ///     <c>protected</c>, and <c>default_and_protected</c>. The default value is <c>default</c>.
     /// </summary>
     public string? BranchesToBeNotified { get; init; }
 
@@ -41,6 +29,10 @@ public sealed record MatrixIntegrationSettings
 
     /// <summary>Trigger event when a confidential work item is created, updated, or closed.</summary>
     public bool? ConfidentialIssuesEvents { get; init; }
+
+    public bool? WorkItemEvents { get; init; }
+
+    public bool? ConfidentialWorkItemEvents { get; init; }
 
     /// <summary>Trigger event when a merge request is created, updated, or merged.</summary>
     public bool? MergeRequestsEvents { get; init; }
@@ -60,15 +52,6 @@ public sealed record MatrixIntegrationSettings
     /// <summary>Trigger event when a wiki page is created or updated.</summary>
     public bool? WikiPageEvents { get; init; }
 
-    /// <summary>Trigger event when an incident is created.</summary>
-    public bool? IncidentEvents { get; init; }
-
-    public bool? WorkItemEvents { get; init; }
-
-    public bool? ConfidentialWorkItemEvents { get; init; }
-
-    public bool? VulnerabilityEvents { get; init; }
-
-    /// <summary>Indicates whether to inherit the default settings. Defaults to <see langword="false" />.</summary>
+    /// <summary>Indicates whether to inherit the default settings. Defaults to <c>false</c>.</summary>
     public bool? UseInheritedSettings { get; init; }
 }

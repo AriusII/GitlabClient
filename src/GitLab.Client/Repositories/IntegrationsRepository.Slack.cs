@@ -28,7 +28,7 @@ internal sealed partial class IntegrationsRepository
             cancellationToken);
     }
 
-    public Task GetSlackOptionsAsync(CancellationToken cancellationToken = default)
+    public Task ProcessSlackOptionsAsync(CancellationToken cancellationToken = default)
     {
         return connection.PostAsync(
             GitLabRouteBuilder.Create(Integrations).Literal("slack").Literal("options").Build(),

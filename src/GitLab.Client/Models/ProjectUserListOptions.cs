@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for the users of a project (<c>GET /projects/:id/users</c>).</summary>
 [GitLabQuery]
-public sealed record ProjectUserListOptions
+public readonly record struct ProjectUserListOptions
 {
     /// <summary>Return only users matching this search term.</summary>
     public string? Search { get; init; }

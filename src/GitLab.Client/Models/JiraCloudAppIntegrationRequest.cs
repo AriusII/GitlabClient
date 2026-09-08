@@ -2,10 +2,10 @@ namespace GitLab.Client.Models;
 
 /// <summary>
 ///     Typed settings for the <c>jira-cloud-app</c> integration (the GitLab for Jira Cloud app) - see
-///     <see cref="GitLabIntegrationSlug.JiraCloudApp" />. Unlike <see cref="JiraIntegrationSettings" />,
+///     <see cref="GitLabIntegrationSlug.JiraCloudApp" />. Unlike <see cref="JiraIntegrationRequest" />,
 ///     the spec declares no required members here at all.
 /// </summary>
-public sealed record JiraCloudAppIntegrationSettings
+public sealed record JiraCloudAppIntegrationRequest
 {
     /// <summary>
     ///     Your Jira Service Management (JSM) Service ID(s). Use a comma (<c>,</c>) to separate multiple

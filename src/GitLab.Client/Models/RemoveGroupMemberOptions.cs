@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     membership is also removed from every subgroup and project, and the user keeps their assignments.
 /// </summary>
 [GitLabQuery]
-public sealed record RemoveGroupMemberOptions
+public readonly record struct RemoveGroupMemberOptions
 {
     /// <summary>
     ///     When true, remove the membership from this group only and leave the memberships the user holds

@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     group scope.
 /// </summary>
 [GitLabQuery]
-public sealed record NugetSearchOptions
+public readonly record struct NugetSearchOptions
 {
     /// <summary>The search term. Left unset, GitLab returns every package.</summary>
     public string? Q { get; init; }

@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/feature_flags_user_lists</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record FeatureFlagUserListOptions
+public readonly record struct FeatureFlagUserListOptions
 {
     /// <summary>Return only user lists whose name matches this text.</summary>
     public string? Search { get; init; }

@@ -8,6 +8,19 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <!-- IConfiguration for the appsettings-driven AddGitLabClient overload, and the
+         OptionsBuilder<T>.Bind(IConfiguration) extension it uses - see
+         GitLabClientServiceCollectionExtensions. Pinned to the same 10.0.11 line as every other
+         Microsoft.Extensions.* package above. -->
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
+  </ItemGroup>
+  <ItemGroup Label="Samples">
+    <!-- Only the AOT harness needs a concrete configuration source; the library itself depends solely
+         on the Abstractions + Bind() extension above. -->
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.11" />
   </ItemGroup>
   <ItemGroup Label="Tests">
     <!-- xUnit v3 (package family renamed from "xunit"). MTP (Microsoft.Testing.Platform) v2 is the

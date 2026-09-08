@@ -17,6 +17,9 @@ internal interface INamespacesService
 
     Task<GitLabNamespace> GetAsync(GroupId namespaceId, CancellationToken cancellationToken = default);
 
+    Task<GitLabNamespace> UpdateAsync(GroupId namespaceId, UpdateNamespaceRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<GitLabNamespaceExistence> ExistsAsync(string path, long? parentId = null,
         CancellationToken cancellationToken = default);
 

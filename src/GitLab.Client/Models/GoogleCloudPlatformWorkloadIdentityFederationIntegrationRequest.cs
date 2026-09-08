@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     authentication to Google Cloud from GitLab CI/CD, configured entirely by pool/provider
 ///     identifiers rather than a stored secret.
 /// </summary>
-public sealed record GoogleCloudPlatformWorkloadIdentityFederationIntegrationSettings
+public sealed record GoogleCloudPlatformWorkloadIdentityFederationIntegrationRequest
 {
     /// <summary>Google Cloud project ID for the Workload Identity Federation.</summary>
     public required string WorkloadIdentityFederationProjectId { get; init; }

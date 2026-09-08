@@ -6,6 +6,7 @@ using GitLab.Client.DependencyInjection;
 using GitLab.Client.Infrastructure.Http;
 using GitLab.Client.Infrastructure.RateLimiting;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -46,6 +47,67 @@ public static partial class GitLabClientServiceCollectionExtensions
             // IOptionsMonitor.CurrentValue, which covers a bare BuildServiceProvider() with no host.
             .ValidateOnStart();
 
+        return AddGitLabClientCore(services);
+    }
+
+    /// <summary>
+    ///     Registers <see cref="IGitLabClient" /> and every resource client behind it, backed by a named
+    ///     <see cref="HttpClient" /> that is taken from <see cref="IHttpClientFactory" /> per operation, with
+    ///     <see cref="GitLabClientOptions" /> bound from a configuration section instead of a delegate.
+    /// </summary>
+    /// <param name="services">The service collection to register into.</param>
+    /// <param name="configuration">
+    ///     The configuration to bind <see cref="GitLabClientOptions" /> from, e.g. the root
+    ///     <c>IConfiguration</c> built from <c>appsettings.json</c>. Only <paramref name="sectionName" />'s
+    ///     section is bound - the rest of the configuration is untouched.
+    /// </param>
+    /// <param name="sectionName">
+    ///     The configuration section to bind, e.g.
+    ///     <c>
+    ///         { "GitLab": { "BaseAddress": "...", "AccessToken": "...", "AuthenticationMode": "...",
+    ///         "UserAgent": "...", "Timeout": "..." } }
+    ///     </c>
+    ///     . Every key is optional; an omitted key keeps
+    ///     <see cref="GitLabClientOptions" />'s own default (in particular <see cref="GitLabClientOptions.BaseAddress" />,
+    ///     which defaults to <c>https://gitlab.com/api/v4/</c>). Defaults to <c>"GitLab"</c>.
+    /// </param>
+    /// <returns>
+    ///     The <see cref="IHttpClientBuilder" /> for the underlying client, so callers can layer their own
+    ///     handlers or resilience policies onto it.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when <c>AddGitLabClient</c> has already been called on this collection. Every resource
+    ///     registration uses <c>TryAdd</c>, but options and HTTP-client configuration delegates accumulate, so a
+    ///     second call would otherwise become a silent last-writer-wins across two different configurations.
+    /// </exception>
+    public static IHttpClientBuilder AddGitLabClient(this IServiceCollection services, IConfiguration configuration,
+        string sectionName = "GitLab")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(sectionName);
+
+        ThrowIfAlreadyRegistered(services);
+
+        services.AddOptions<GitLabClientOptions>()
+            .Bind(configuration.GetSection(sectionName))
+            // Same startup-time surfacing as the delegate overload - a missing AccessToken in the bound
+            // section fails host startup rather than the first API call.
+            .ValidateOnStart();
+
+        return AddGitLabClientCore(services);
+    }
+
+    /// <summary>
+    ///     The registration logic shared by every <c>AddGitLabClient</c> overload: everything downstream of
+    ///     <see cref="GitLabClientOptions" /> itself being registered (rate-limit tracking, the transport
+    ///     handler pipeline, <see cref="IGitLabApiConnection" />, every resource client, and the named
+    ///     <see cref="HttpClient" /> that backs them). Each overload only differs in how
+    ///     <see cref="GitLabClientOptions" /> gets populated - a delegate or a bound configuration section -
+    ///     and calls into this once that is registered.
+    /// </summary>
+    private static IHttpClientBuilder AddGitLabClientCore(IServiceCollection services)
+    {
         services.TryAddEnumerable(ServiceDescriptor
             .Singleton<IValidateOptions<GitLabClientOptions>, GitLabClientOptionsValidator>());
 

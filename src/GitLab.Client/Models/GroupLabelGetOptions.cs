@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Options for retrieving a single group label (<c>GET /groups/:id/labels/:name</c>).</summary>
 [GitLabQuery]
-public sealed record GroupLabelGetOptions
+public readonly record struct GroupLabelGetOptions
 {
     /// <summary>Also search ancestor groups for the label.</summary>
     public bool? IncludeAncestorGroups { get; init; }

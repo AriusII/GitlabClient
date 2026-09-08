@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     <c>search</c> is handled on <see cref="SearchListOptions" />'s sibling routes.
 /// </summary>
 [GitLabQuery]
-public sealed record SemanticCodeSearchOptions
+public readonly record struct SemanticCodeSearchOptions
 {
     /// <summary>
     ///     Restrict the search to files under this directory (for example <c>"app/services/"</c>). Must be

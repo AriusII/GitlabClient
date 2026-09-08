@@ -725,4 +725,12 @@ public interface IGitLabClient
     ///     for a project's CI/CD pipelines, addressed by their project-scoped internal id (<c>iid</c>).
     /// </summary>
     IAttestationsClient Attestations { get; }
+
+    /// <summary>
+    ///     Cluster agents (<c>/projects/:id/cluster_agents</c>) - registrations for the GitLab agent for
+    ///     Kubernetes, their authentication tokens, and receptive agents' URL configurations. Distinct
+    ///     from the deprecated, certificate-based Kubernetes cluster integration, which this library does
+    ///     not implement.
+    /// </summary>
+    IClusterAgentsClient ClusterAgents { get; }
 }

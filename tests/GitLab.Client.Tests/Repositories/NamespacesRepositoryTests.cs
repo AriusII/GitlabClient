@@ -99,6 +99,43 @@ public sealed class NamespacesRepositoryTests
     }
 
     [Fact]
+    public async Task UpdateAsync_PutsTheComputeMinutesAndStorageFields_AndDeserializesTheUpdatedNamespace()
+    {
+        string? sentBody = null;
+
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            sentBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(NamespaceJson, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress };
+        NamespacesRepository repository = new(new GitLabApiConnection(httpClient));
+
+        GitLabNamespace ns = await repository.UpdateAsync(
+            2,
+            new UpdateNamespaceRequest
+            {
+                SharedRunnersMinutesLimit = 133,
+                ExtraSharedRunnersMinutesLimit = 133,
+                AdditionalPurchasedStorageSize = 1000,
+                AdditionalPurchasedStorageEndsOn = new DateOnly(2022, 6, 18)
+            },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Put, handler.LastRequest?.Method);
+        Assert.Equal("https://gitlab.example/api/v4/namespaces/2", handler.LastRequest?.RequestUri?.AbsoluteUri);
+        Assert.Equal(
+            """{"shared_runners_minutes_limit":133,"extra_shared_runners_minutes_limit":133,"additional_purchased_storage_size":1000,"additional_purchased_storage_ends_on":"2022-06-18"}""",
+            sentBody);
+        Assert.Equal(2, ns.Id);
+        Assert.Equal(1000, ns.AdditionalPurchasedStorageSize);
+    }
+
+    [Fact]
     public async Task ExistsAsync_EscapesThePathCandidate_AndSendsTheParentIdFilter()
     {
         const string Json = """{ "exists": true, "suggests": ["my-group1"] }""";

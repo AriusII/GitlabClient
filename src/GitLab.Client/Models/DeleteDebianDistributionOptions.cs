@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     <c>version</c> included - which the update body itself does not accept.
 /// </summary>
 [GitLabQuery]
-public sealed record DeleteDebianDistributionOptions
+public readonly record struct DeleteDebianDistributionOptions
 {
     public string? Suite { get; init; }
 

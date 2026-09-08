@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     run and the metric name are required and are passed as method arguments instead.
 /// </summary>
 [GitLabQuery]
-public sealed record MlflowMetricHistoryOptions
+public readonly record struct MlflowMetricHistoryOptions
 {
     /// <summary>Page size. GitLab defaults to 1000.</summary>
     public int? MaxResults { get; init; }

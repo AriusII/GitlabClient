@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's jobs (<c>GET /projects/:id/jobs</c>).</summary>
 [GitLabQuery]
-public sealed record JobListOptions
+public readonly record struct JobListOptions
 {
     /// <summary>
     ///     Job statuses to include - "created", "pending", "running", "failed", "success", "canceled",

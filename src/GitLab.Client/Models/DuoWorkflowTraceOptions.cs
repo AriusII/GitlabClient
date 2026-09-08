@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /ai/duo_workflows/workflows/:workflow_id/trace.jsonl</c>.</summary>
 [GitLabQuery]
-public sealed record DuoWorkflowTraceOptions
+public readonly record struct DuoWorkflowTraceOptions
 {
     /// <summary>
     ///     Include internal channels such as conversation history and handover. Restricted to the flow's

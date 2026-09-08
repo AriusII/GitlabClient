@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     what has already been consumed.
 /// </summary>
 [GitLabQuery]
-public sealed record JobTraceOptions
+public readonly record struct JobTraceOptions
 {
     /// <summary>Byte offset into the log to start reading from.</summary>
     public long? ByteOffset { get; init; }

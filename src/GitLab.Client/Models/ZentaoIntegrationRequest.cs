@@ -1,10 +1,10 @@
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Request body for <c>PUT /projects/:id/services/zentao</c> - GitLab's older path spelling for the
-///     ZenTao integration (use ZenTao as the project's external issue tracker).
+///     Settings for the ZenTao integration (<c>PUT /projects/:id/integrations/zentao</c>) - use ZenTao
+///     as the project's external issue tracker.
 /// </summary>
-public sealed record ZentaoSettingsRequest
+public sealed record ZentaoIntegrationRequest
 {
     /// <summary>Base URL of the ZenTao instance.</summary>
     public required Uri Url { get; init; }

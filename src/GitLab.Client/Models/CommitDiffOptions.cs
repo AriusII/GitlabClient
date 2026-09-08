@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Options for a commit's diff (<c>GET /projects/:id/repository/commits/:sha/diff</c>).</summary>
 [GitLabQuery]
-public sealed record CommitDiffOptions
+public readonly record struct CommitDiffOptions
 {
     /// <summary>
     ///     Asks GitLab to render <see cref="GitLabDiff.Diff" /> in unified-diff format, headers included,

@@ -3,10 +3,10 @@ using System.Text.Json.Serialization;
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Request body for <c>PUT /projects/:id/services/teamcity</c> - GitLab's older path spelling for
-///     the JetBrains TeamCity integration (run a TeamCity build configuration as the project's CI).
+///     Settings for the JetBrains TeamCity integration (<c>PUT /projects/:id/integrations/teamcity</c>)
+///     - run a TeamCity build configuration as the project's CI.
 /// </summary>
-public sealed record TeamCitySettingsRequest
+public sealed record TeamCityIntegrationRequest
 {
     /// <summary>Enable SSL verification. Defaults to <c>true</c> (enabled).</summary>
     public bool? EnableSslVerification { get; init; }

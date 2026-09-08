@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/packages/:package_id/package_files</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record PackageFileListOptions
+public readonly record struct PackageFileListOptions
 {
     public int? Page { get; init; }
 

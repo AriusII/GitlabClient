@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     the only query parameters either takes.
 /// </summary>
 [GitLabQuery]
-public sealed record JobTokenScopeAllowlistListOptions
+public readonly record struct JobTokenScopeAllowlistListOptions
 {
     /// <summary>
     ///     The first page to fetch. Listing streams every following page on its own, so this skips the pages

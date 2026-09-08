@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/repository/commits/:sha/refs</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record CommitRefListOptions
+public readonly record struct CommitRefListOptions
 {
     /// <summary>Restricts the answer to branches or to tags. GitLab returns both when unset.</summary>
     public GitLabCommitRefScope? Type { get; init; }

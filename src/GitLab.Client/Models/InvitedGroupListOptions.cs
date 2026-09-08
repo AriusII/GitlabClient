@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Filters for <c>GET /groups/:id/invited_groups</c> - the groups invited into this one.
 /// </summary>
 [GitLabQuery]
-public sealed record InvitedGroupListOptions
+public readonly record struct InvitedGroupListOptions
 {
     /// <summary>Which invitations to include: <c>direct</c>, <c>inherited</c>, or both.</summary>
     public IReadOnlyList<string>? Relation { get; init; }

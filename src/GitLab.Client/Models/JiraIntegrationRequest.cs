@@ -11,7 +11,7 @@ namespace GitLab.Client.Models;
 ///         "fixed" to a bool, since GitLab, not this client, decides the wire shape.
 ///     </para>
 /// </summary>
-public sealed record JiraIntegrationSettings
+public sealed record JiraIntegrationRequest
 {
     /// <summary>
     ///     The URL to the Jira project which is being linked to this GitLab project (for example,

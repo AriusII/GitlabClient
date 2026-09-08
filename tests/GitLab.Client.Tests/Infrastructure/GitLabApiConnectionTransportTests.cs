@@ -326,10 +326,7 @@ public sealed class GitLabApiConnectionTransportTests
                 Content = new StringContent(ProjectJson, Encoding.UTF8, "application/json")
             });
 
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = BaseAddress, Timeout = Timeout.InfiniteTimeSpan
-        };
+        using HttpClient httpClient = new(handler) { BaseAddress = BaseAddress, Timeout = Timeout.InfiniteTimeSpan };
         GitLabApiConnection connection = new(httpClient);
 
         using MemoryStream content = new("PNG-BYTES"u8.ToArray());

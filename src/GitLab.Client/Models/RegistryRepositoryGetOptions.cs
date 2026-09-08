@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Inclusion flags for <c>GET /registry/repositories/:id</c>.</summary>
 [GitLabQuery]
-public sealed record RegistryRepositoryGetOptions
+public readonly record struct RegistryRepositoryGetOptions
 {
     /// <summary>Include the repository's tags in the response.</summary>
     public bool? Tags { get; init; }

@@ -25,6 +25,17 @@ internal sealed class NamespacesRepository(IGitLabApiConnection connection) : IN
             cancellationToken);
     }
 
+    public Task<GitLabNamespace> UpdateAsync(GroupId namespaceId, UpdateNamespaceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return connection.PutAsync(
+            GitLabRouteBuilder.Create("namespaces").Segment(namespaceId).Build(),
+            request,
+            GitLabJsonContext.Default.UpdateNamespaceRequest,
+            GitLabJsonContext.Default.GitLabNamespace,
+            cancellationToken);
+    }
+
     public Task<GitLabNamespaceExistence> ExistsAsync(string path, long? parentId = null,
         CancellationToken cancellationToken = default)
     {

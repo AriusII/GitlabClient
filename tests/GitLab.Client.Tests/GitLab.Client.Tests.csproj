@@ -15,6 +15,10 @@
     <!-- Drives both source generators directly through CSharpGeneratorDriver, so generator diagnostics
          and incrementality can be asserted on - neither is observable from the generated output alone. -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+    <!-- ConfigurationBuilder + AddInMemoryCollection, for AddGitLabClient(IConfiguration) tests.
+         Microsoft.Extensions.Configuration.Abstractions and .Options.ConfigurationExtensions already
+         arrive transitively via the GitLab.Client project reference below. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration"/>
   </ItemGroup>
 
   <ItemGroup>

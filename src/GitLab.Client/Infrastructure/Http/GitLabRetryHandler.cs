@@ -169,9 +169,7 @@ internal sealed class GitLabRetryHandler : DelegatingHandler
     {
         HttpRequestMessage clone = new(originalRequest.Method, originalRequest.RequestUri)
         {
-            Version = originalRequest.Version,
-            VersionPolicy = originalRequest.VersionPolicy,
-            Content = content,
+            Version = originalRequest.Version, VersionPolicy = originalRequest.VersionPolicy, Content = content
         };
 
         foreach (KeyValuePair<string, IEnumerable<string>> header in originalHeaders)

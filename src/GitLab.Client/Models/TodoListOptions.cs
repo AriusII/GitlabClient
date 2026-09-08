@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing the authenticated user's to-do items (<c>GET /todos</c>).</summary>
 [GitLabQuery]
-public sealed record TodoListOptions
+public readonly record struct TodoListOptions
 {
     /// <summary>
     ///     One of <c>assigned</c>, <c>review_requested</c>, <c>mentioned</c>, <c>build_failed</c>,

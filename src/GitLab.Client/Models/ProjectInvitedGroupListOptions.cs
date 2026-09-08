@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for the groups a project is shared with (<c>GET /projects/:id/invited_groups</c>).</summary>
 [GitLabQuery]
-public sealed record ProjectInvitedGroupListOptions
+public readonly record struct ProjectInvitedGroupListOptions
 {
     /// <summary>Filter by how the group is related to the project - "direct" and/or "inherited".</summary>
     public IReadOnlyList<string>? Relation { get; init; }

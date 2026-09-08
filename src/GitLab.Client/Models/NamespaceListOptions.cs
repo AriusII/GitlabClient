@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for <c>GET /namespaces</c>.</summary>
 [GitLabQuery]
-public sealed record NamespaceListOptions
+public readonly record struct NamespaceListOptions
 {
     /// <summary>Free-text filter, matched against the namespace name by default.</summary>
     public string? Search { get; init; }

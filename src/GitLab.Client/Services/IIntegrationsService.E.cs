@@ -9,29 +9,31 @@ namespace GitLab.Client.Services;
 /// </summary>
 internal partial interface IIntegrationsService
 {
-    Task<GitLabIntegration> SetSquashTmAsync(ProjectId projectId, SquashTmSettingsRequest settings,
+    Task<GitLabIntegration> SetSquashTmAsync(ProjectId projectId, SquashTmIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetTeamCityAsync(ProjectId projectId, TeamCitySettingsRequest settings,
+    Task<GitLabIntegration> SetTeamCityAsync(ProjectId projectId, TeamCityIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetTelegramAsync(ProjectId projectId, TelegramSettingsRequest settings,
+    Task<GitLabIntegration> SetTelegramAsync(ProjectId projectId, TelegramIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetUnifyCircuitAsync(ProjectId projectId, UnifyCircuitSettingsRequest settings,
+    Task<GitLabIntegration> SetUnifyCircuitAsync(ProjectId projectId, UnifyCircuitIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetWebexTeamsAsync(ProjectId projectId, WebexTeamsSettingsRequest settings,
+    Task<GitLabIntegration> SetWebexTeamsAsync(ProjectId projectId, WebexTeamsIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetYouTrackAsync(ProjectId projectId, YouTrackSettingsRequest settings,
+    Task<GitLabIntegration> SetYouTrackAsync(ProjectId projectId, YouTrackIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
-    Task<GitLabIntegration> SetZentaoAsync(ProjectId projectId, ZentaoSettingsRequest settings,
+    Task<GitLabIntegration> SetZentaoAsync(ProjectId projectId, ZentaoIntegrationRequest settings,
         CancellationToken cancellationToken = default);
 
+    [Obsolete("Use the modern /integrations route instead (GetAsync).")]
     Task<GitLabIntegration> GetServiceAsync(ProjectId projectId, string slug,
         CancellationToken cancellationToken = default);
 
+    [Obsolete("Use the modern /integrations route instead (DisableAsync).")]
     Task DisableServiceAsync(ProjectId projectId, string slug, CancellationToken cancellationToken = default);
 }

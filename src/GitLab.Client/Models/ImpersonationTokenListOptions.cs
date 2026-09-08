@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     <see cref="PersonalAccessTokenListOptions" /> - GitLab accepts only a state filter here.
 /// </summary>
 [GitLabQuery]
-public sealed record ImpersonationTokenListOptions
+public readonly record struct ImpersonationTokenListOptions
 {
     /// <summary><c>all</c>, <c>active</c> or <c>inactive</c>. Defaults to <c>all</c>.</summary>
     public string? State { get; init; }

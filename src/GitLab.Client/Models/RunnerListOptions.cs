@@ -11,7 +11,7 @@ namespace GitLab.Client.Models;
 ///     </para>
 /// </summary>
 [GitLabQuery]
-public sealed record RunnerListOptions
+public readonly record struct RunnerListOptions
 {
     /// <summary>"instance_type", "group_type" or "project_type".</summary>
     public string? Type { get; init; }

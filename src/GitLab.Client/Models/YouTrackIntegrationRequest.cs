@@ -1,10 +1,10 @@
 namespace GitLab.Client.Models;
 
 /// <summary>
-///     Request body for <c>PUT /projects/:id/services/youtrack</c> - GitLab's older path spelling for
-///     the YouTrack integration (use YouTrack as the project's external issue tracker).
+///     Settings for the YouTrack integration (<c>PUT /projects/:id/integrations/youtrack</c>) - use
+///     YouTrack as the project's external issue tracker.
 /// </summary>
-public sealed record YouTrackSettingsRequest
+public sealed record YouTrackIntegrationRequest
 {
     /// <summary>URL of the project.</summary>
     public required Uri ProjectUrl { get; init; }

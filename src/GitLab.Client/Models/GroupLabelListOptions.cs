@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a group's labels (<c>GET /groups/:id/labels</c>).</summary>
 [GitLabQuery]
-public sealed record GroupLabelListOptions
+public readonly record struct GroupLabelListOptions
 {
     /// <summary>Fill in the issue and merge request counts, which GitLab omits by default.</summary>
     public bool? WithCounts { get; init; }

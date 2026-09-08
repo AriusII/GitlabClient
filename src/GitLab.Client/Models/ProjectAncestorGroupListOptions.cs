@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for a project's ancestor groups (<c>GET /projects/:id/groups</c>).</summary>
 [GitLabQuery]
-public sealed record ProjectAncestorGroupListOptions
+public readonly record struct ProjectAncestorGroupListOptions
 {
     /// <summary>Return only groups matching this search term.</summary>
     public string? Search { get; init; }

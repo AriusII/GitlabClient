@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     only ones with placeholders to expand.
 /// </summary>
 [GitLabQuery]
-public sealed record ProjectTemplateOptions
+public readonly record struct ProjectTemplateOptions
 {
     /// <summary>
     ///     The project the template is stored in. Disambiguates templates that share a name across several

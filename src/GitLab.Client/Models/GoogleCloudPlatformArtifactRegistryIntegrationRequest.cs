@@ -12,7 +12,7 @@ namespace GitLab.Client.Models;
 ///         needs them populated.
 ///     </para>
 /// </summary>
-public sealed record GoogleCloudPlatformArtifactRegistryIntegrationSettings
+public sealed record GoogleCloudPlatformArtifactRegistryIntegrationRequest
 {
     /// <summary>ID of the Google Cloud project.</summary>
     public required string ArtifactRegistryProjectId { get; init; }

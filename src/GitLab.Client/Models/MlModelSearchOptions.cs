@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     Filters for <c>GET /projects/:id/ml/mlflow/api/2.0/mlflow/registered-models/search</c>.
 /// </summary>
 [GitLabQuery]
-public sealed record MlModelSearchOptions
+public readonly record struct MlModelSearchOptions
 {
     /// <summary>
     ///     The MLflow search filter. It must be written as <c>name='value'</c>; GitLab supports filtering

@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     (<c>GET /projects/:id/pipelines/:pipeline_id/trigger_jobs</c>).
 /// </summary>
 [GitLabQuery]
-public sealed record TriggerJobListOptions
+public readonly record struct TriggerJobListOptions
 {
     /// <summary>
     ///     Job statuses to include - "created", "pending", "running", "failed", "success", "canceled",

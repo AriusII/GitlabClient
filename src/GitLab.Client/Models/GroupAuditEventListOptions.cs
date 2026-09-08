@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for a group's audit log (<c>GET /groups/:id/audit_events</c>).</summary>
 [GitLabQuery]
-public sealed record GroupAuditEventListOptions
+public readonly record struct GroupAuditEventListOptions
 {
     /// <summary>Return only events recorded after this instant.</summary>
     public DateTimeOffset? CreatedAfter { get; init; }

@@ -9,7 +9,7 @@ namespace GitLab.Client.Models;
 ///     rather than taking a job id.
 /// </summary>
 [GitLabQuery]
-public sealed record JobArtifactRefDownloadOptions
+public readonly record struct JobArtifactRefDownloadOptions
 {
     /// <summary>
     ///     A CI/CD job token, for reading another project's artifacts from inside a multi-project pipeline.

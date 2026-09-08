@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     one filter to be set, or it rejects the request rather than deleting every tag by accident.
 /// </summary>
 [GitLabQuery]
-public sealed record DeleteRegistryRepositoryTagsOptions
+public readonly record struct DeleteRegistryRepositoryTagsOptions
 {
     /// <summary>The tag name regexp to delete; pass <c>.*</c> to match every tag.</summary>
     public string? NameRegexDelete { get; init; }

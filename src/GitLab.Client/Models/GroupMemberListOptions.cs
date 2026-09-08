@@ -8,7 +8,7 @@ namespace GitLab.Client.Models;
 ///     <c>/members/all</c> route and <see cref="AllMemberListOptions" /> for those.
 /// </summary>
 [GitLabQuery]
-public sealed record GroupMemberListOptions
+public readonly record struct GroupMemberListOptions
 {
     /// <summary>
     ///     A search term matched against member name, username and email. GitLab names this parameter

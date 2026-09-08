@@ -44,6 +44,23 @@ internal sealed class PackagesTerraformModulesRepository(IGitLabApiConnection co
             cancellationToken);
     }
 
+    public Task<GitLabFileResponse> DownloadModuleAsync(GroupId moduleNamespace, string moduleName,
+        string moduleSystem, CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            ModuleRoute(moduleNamespace, moduleName, moduleSystem).Literal("download").Build(),
+            cancellationToken);
+    }
+
+    public Task<GitLabFileResponse> DownloadModuleVersionAsync(GroupId moduleNamespace, string moduleName,
+        string moduleSystem, string moduleVersion, CancellationToken cancellationToken = default)
+    {
+        return connection.GetFileAsync(
+            ModuleRoute(moduleNamespace, moduleName, moduleSystem).Escaped(moduleVersion).Literal("download")
+                .Build(),
+            cancellationToken);
+    }
+
     public Task<GitLabFileResponse> DownloadLatestModuleAsync(ProjectId projectId, string moduleName,
         string moduleSystem, bool? terraformGet = null, CancellationToken cancellationToken = default)
     {

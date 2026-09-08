@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing every release in a group (<c>GET /groups/:id/releases</c>).</summary>
 [GitLabQuery]
-public sealed record GroupReleaseListOptions
+public readonly record struct GroupReleaseListOptions
 {
     /// <summary>"asc" or "desc". GitLab defaults to "desc".</summary>
     public string? Sort { get; init; }

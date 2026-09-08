@@ -7,7 +7,7 @@ namespace GitLab.Client.Models;
 ///     of the <c>changes</c> endpoint.
 /// </summary>
 [GitLabQuery]
-public sealed record MergeRequestDiffListOptions
+public readonly record struct MergeRequestDiffListOptions
 {
     /// <summary>
     ///     Presents the diffs in the Git unified format rather than GitLab's own, which matters for any

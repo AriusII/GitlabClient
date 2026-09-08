@@ -4,7 +4,7 @@ namespace GitLab.Client.Models;
 
 /// <summary>Filters for listing a project's commits (<c>GET /projects/:id/repository/commits</c>).</summary>
 [GitLabQuery]
-public sealed record CommitListOptions
+public readonly record struct CommitListOptions
 {
     public string? RefName { get; init; }
 

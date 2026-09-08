@@ -6,7 +6,7 @@ namespace GitLab.Client.Models;
 ///     <see cref="GitLabIntegrationSlug.MattermostSlashCommands" />, a different integration with its
 ///     own settings shape.
 /// </summary>
-public sealed record MattermostIntegrationSettings
+public sealed record MattermostIntegrationRequest
 {
     /// <summary>
     ///     Mattermost notifications webhook (for example,
