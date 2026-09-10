@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -29,6 +30,18 @@ public interface IRepositoryFilesClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Creates a file from the binary <c>file</c> multipart part declared by GitLab 19.4's OpenAPI schema.
+    ///     The client always sends it under the required <c>file</c> form field, irrespective of
+    ///     <see cref="GitLabFileUpload.FieldName" />.
+    /// </summary>
+    /// <param name="projectId">The project to create the file in.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="file">The binary content to create.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<GitLabRepositoryFile> CreateAsync(ProjectId projectId, string filePath, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Replaces an existing file's content and commits the change
     ///     (<c>PUT /projects/:id/repository/files/:file_path</c>).
     /// </summary>
@@ -40,6 +53,18 @@ public interface IRepositoryFilesClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Replaces a file from the binary <c>file</c> multipart part declared by GitLab 19.4's OpenAPI schema.
+    ///     The client always sends it under the required <c>file</c> form field, irrespective of
+    ///     <see cref="GitLabFileUpload.FieldName" />.
+    /// </summary>
+    /// <param name="projectId">The project that owns the file.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="file">The replacement binary content.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<GitLabRepositoryFile> UpdateAsync(ProjectId projectId, string filePath, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Deletes a file and commits the removal (<c>DELETE /projects/:id/repository/files/:file_path</c>).
     /// </summary>
     /// <param name="projectId">The project that owns the file.</param>
@@ -48,6 +73,17 @@ public interface IRepositoryFilesClient
     /// <param name="commitMessage">The commit message.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
     Task DeleteAsync(ProjectId projectId, string filePath, string branch, string commitMessage,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Deletes a file and commits the removal with optional authorship, branch-creation, and optimistic
+    ///     concurrency settings (<c>DELETE /projects/:id/repository/files/:file_path</c>).
+    /// </summary>
+    /// <param name="projectId">The project that owns the file.</param>
+    /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
+    /// <param name="request">The deletion commit and its optional GitLab controls.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task DeleteAsync(ProjectId projectId, string filePath, DeleteRepositoryFileRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -97,7 +133,7 @@ public interface IRepositoryFilesClient
     /// <param name="filePath">Full path from the repository root. Slashes are URL-encoded for you.</param>
     /// <param name="refName">The branch, tag or commit SHA to blame at.</param>
     /// <param name="rangeStart">First line to blame. Supply it together with <paramref name="rangeEnd" />.</param>
-    /// <param name="rangeEnd">Last line to blame.</param>
+    /// <param name="rangeEnd">Last line to blame. Both bounds must be positive.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
     /// <returns>The blame ranges, in file order.</returns>
     IAsyncEnumerable<GitLabBlameRange> GetBlameAsync(ProjectId projectId, string filePath, string refName,

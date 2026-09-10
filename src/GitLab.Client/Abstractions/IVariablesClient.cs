@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -41,6 +43,14 @@ public interface IVariablesClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Updates one project CI/CD variable selected by key and its current environment scope. The filter
+    ///     selects the existing variable; <see cref="UpdateVariableRequest.EnvironmentScope" /> in
+    ///     <paramref name="request" /> is the scope to assign after the update and can therefore differ.
+    /// </summary>
+    Task<GitLabVariable> UpdateProjectVariableAsync(ProjectId projectId, string key, UpdateVariableRequest request,
+        string? filterEnvironmentScope, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Deletes one project variable. Supply <paramref name="environmentScope" /> to target a specific
     ///     scope of a key that exists more than once.
     /// </summary>
@@ -51,20 +61,53 @@ public interface IVariablesClient
     IAsyncEnumerable<GitLabVariable> ListGroupVariablesAsync(GroupId groupId, VariableListOptions? options = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Reads one group CI/CD variable.</summary>
+    /// <summary>
+    ///     Reads one group CI/CD variable when its key is unique across environment scopes. When it is not,
+    ///     use the overload that selects the variable with an environment-scope filter.
+    /// </summary>
     Task<GitLabVariable> GetGroupVariableAsync(GroupId groupId, string key,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Reads one group CI/CD variable selected by key and environment scope. GitLab permits the same key
+    ///     in several scopes, so <paramref name="filterEnvironmentScope" /> disambiguates that case through
+    ///     <c>filter[environment_scope]</c>.
+    /// </summary>
+    Task<GitLabVariable> GetGroupVariableAsync(GroupId groupId, string key, string? filterEnvironmentScope,
         CancellationToken cancellationToken = default);
 
     /// <summary>Creates a group CI/CD variable.</summary>
     Task<GitLabVariable> CreateGroupVariableAsync(GroupId groupId, CreateVariableRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Updates a group CI/CD variable.</summary>
+    /// <summary>
+    ///     Updates a group CI/CD variable when its key is unique across environment scopes. When it is not,
+    ///     use the overload that selects the existing variable with an environment-scope filter.
+    /// </summary>
     Task<GitLabVariable> UpdateGroupVariableAsync(GroupId groupId, string key, UpdateVariableRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes one group CI/CD variable.</summary>
-    Task DeleteGroupVariableAsync(GroupId groupId, string key, CancellationToken cancellationToken = default);
+    /// <summary>
+    ///     Updates one group CI/CD variable selected by key and its current environment scope. The filter
+    ///     selects the existing variable; <see cref="UpdateVariableRequest.EnvironmentScope" /> in
+    ///     <paramref name="request" /> is the scope to assign after the update and can therefore differ.
+    /// </summary>
+    Task<GitLabVariable> UpdateGroupVariableAsync(GroupId groupId, string key, UpdateVariableRequest request,
+        string? filterEnvironmentScope, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Deletes one group CI/CD variable when its key is unique across environment scopes. When it is not,
+    ///     use the overload that selects the variable with an environment-scope filter.
+    /// </summary>
+    Task DeleteGroupVariableAsync(GroupId groupId, string key,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Deletes one group CI/CD variable selected by key and environment scope, using
+    ///     <c>filter[environment_scope]</c> to avoid deleting a same-named variable in another scope.
+    /// </summary>
+    Task DeleteGroupVariableAsync(GroupId groupId, string key, string? filterEnvironmentScope,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Streams every instance-level CI/CD variable. Administrator only, and there is exactly one
@@ -79,20 +122,12 @@ public interface IVariablesClient
     /// </summary>
     Task<GitLabVariable> GetInstanceVariableAsync(string key, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    ///     Creates an instance variable. GitLab ignores
-    ///     <see cref="CreateVariableRequest.EnvironmentScope" /> and
-    ///     <see cref="CreateVariableRequest.MaskedAndHidden" /> at this scope - the request record is shared
-    ///     with the project and group forms, which do honour them.
-    /// </summary>
-    Task<GitLabVariable> CreateInstanceVariableAsync(CreateVariableRequest request,
+    /// <summary>Creates an instance variable with the fields accepted by GitLab's administrative route.</summary>
+    Task<GitLabVariable> CreateInstanceVariableAsync(CreateInstanceVariableRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    ///     Updates an instance variable. <see cref="UpdateVariableRequest.EnvironmentScope" /> is ignored
-    ///     at this scope.
-    /// </summary>
-    Task<GitLabVariable> UpdateInstanceVariableAsync(string key, UpdateVariableRequest request,
+    /// <summary>Updates an instance variable with the fields accepted by GitLab's administrative route.</summary>
+    Task<GitLabVariable> UpdateInstanceVariableAsync(string key, UpdateInstanceVariableRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>Deletes an instance variable.</summary>

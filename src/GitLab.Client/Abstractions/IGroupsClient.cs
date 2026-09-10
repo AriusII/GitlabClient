@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -8,6 +10,18 @@ public interface IGroupsClient
 {
     /// <summary>Retrieves one group by numeric ID or namespaced path (<c>GET /groups/:id</c>).</summary>
     Task<GitLabGroup> GetAsync(GroupId groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Retrieves one group by numeric ID or namespaced path with the selected optional projections
+    ///     (<c>GET /groups/:id</c>).
+    /// </summary>
+    /// <remarks>
+    ///     Pass <see cref="GroupGetOptions.WithProjects" /> as <see langword="false" /> when callers only
+    ///     need group settings: omitting embedded projects avoids a disproportionately large response for
+    ///     namespaces with many projects.
+    /// </remarks>
+    Task<GitLabGroup> GetAsync(GroupId groupId, GroupGetOptions options,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Streams every group visible to the caller (<c>GET /groups</c>).</summary>
     IAsyncEnumerable<GitLabGroup> ListAsync(GroupListOptions? options = null,

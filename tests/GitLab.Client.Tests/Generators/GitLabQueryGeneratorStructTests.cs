@@ -110,7 +110,7 @@ public sealed class GitLabQueryGeneratorStructTests
         GeneratorHarnessResult result =
             GeneratorTestHarness.Run([new GitLabQueryGenerator()], StructOptionsSource, RouteBuilderStub);
 
-        GeneratorSources.AssertNoDiagnostics(result);
+        GeneratorAssertions.AssertNoDiagnostics(result);
         string generated = result.Source(GeneratedHintName);
 
         Assert.Contains("options.Value.Count", generated, StringComparison.Ordinal);
@@ -128,8 +128,8 @@ public sealed class GitLabQueryGeneratorStructTests
         GeneratorHarnessResult result =
             GeneratorTestHarness.Run([new GitLabQueryGenerator()], StructOptionsSource, RouteBuilderStub);
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        GeneratorSources.AssertCompiles(result);
+        GeneratorAssertions.AssertNoDiagnostics(result);
+        GeneratorAssertions.AssertCompiles(result);
 
         using MemoryStream assemblyBytes = new();
         EmitResult emitResult = result.Compilation.Emit(

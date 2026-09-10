@@ -4,7 +4,8 @@
 
 using GitLab.Client.Abstractions;
 using GitLab.Client.Abstractions.Exceptions;
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Batching;
+using GitLab.Client.Configuration;
 using GitLab.Client.Models;
 
 using Microsoft.Extensions.Configuration;
@@ -32,6 +33,18 @@ services.PostConfigure<GitLabClientOptions>(options =>
 await using ServiceProvider provider = services.BuildServiceProvider();
 
 IGitLabClient gitLab = provider.GetRequiredService<IGitLabClient>();
+
+// Resolve the GraphQL root and its curated Work Items entry point without sending a request. This
+// keeps the Native AOT smoke test network-free for GraphQL while retaining the generated root-client
+// wiring and direct GraphQL client implementation in the published application.
+IGraphQLClient graphQL = gitLab.GraphQL;
+ArgumentNullException.ThrowIfNull(graphQL.WorkItems);
+Console.WriteLine("GitLab GraphQL Work Items client resolved without executing a request.");
+
+// Exercise the client-side batch facade through the generated root client without creating network traffic. This
+// keeps its generic contracts and generated DI wiring in the Native AOT reachability graph.
+GitLabBatchExecution emptyBatch = await gitLab.Batches.Create().ExecuteAsync();
+Console.WriteLine($"GitLab batch client resolved with {emptyBatch.Count} queued operations.");
 
 try
 {

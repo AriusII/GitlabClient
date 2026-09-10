@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>GitLab.Client.Contracts</AssemblyName>
+    <RootNamespace>GitLab.Client</RootNamespace>
+    <!-- Contract XML documentation can refer to endpoint methods and transport exceptions without
+         making this lowest-level assembly depend upward on either project. -->
+    <NoWarn>CS1574;$(NoWarn)</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all"/>
+    <AdditionalFiles Include="..\BannedSymbols.txt"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\generators\GitLab.Client.SourceGenerators\GitLab.Client.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      GlobalPropertiesToRemove="PublishAot"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GitLab.Client"/>
+    <InternalsVisibleTo Include="GitLab.Client.Http"/>
+    <InternalsVisibleTo Include="GitLab.Client.Routing"/>
+    <InternalsVisibleTo Include="GitLab.Client.Tests"/>
+  </ItemGroup>
+
+</Project>

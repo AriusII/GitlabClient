@@ -2,7 +2,8 @@
 
 ## Supported versions
 
-This project tracks the latest commit on `main`. There are no maintained release branches at this time, so security fixes are only provided against `main` / the latest published NuGet package.
+This project tracks the latest commit on `main`. There are no maintained release branches at this time, so security fixes
+are provided against `main` and released in the latest compatible `GitLab.Client` package.
 
 ## Reporting a vulnerability
 
@@ -22,11 +23,11 @@ This opens a private security advisory visible only to the maintainer until a fi
 
 ## Scope
 
-`GitLab.Client` is a .NET REST API client for GitLab. Security-relevant areas include, non-exhaustively:
+The `GitLab.Client` package is a .NET REST API client for GitLab. Security-relevant areas include, non-exhaustively:
 
 - Credential handling (`PRIVATE-TOKEN`, `Authorization: Bearer`, `JOB-TOKEN`) — tokens must never leak into logs, exception messages, or serialized output.
 - Request routing and encoding (`GitLabRouteBuilder`) — unescaped path segments or query values that could redirect a call to an unintended host or path.
 - JSON (de)serialization via the `System.Text.Json` source-generated contexts.
 - Anything that would only surface under Native AOT/trimming (e.g. a reflection fallback silently reintroduced).
 
-Dependency vulnerabilities (NuGet advisories) are also in scope — see the tracking issue for enabling Dependabot alerts on this repository.
+Dependency vulnerabilities (including NuGet advisories) are also in scope.

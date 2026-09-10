@@ -1,4 +1,5 @@
 using GitLab.Client.Models;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -7,7 +8,7 @@ namespace GitLab.Client.Abstractions;
 ///     <c>/templates/gitignores</c>, <c>/templates/gitlab_ci_ymls</c>, <c>/templates/licenses</c>) - the
 ///     file templates every project on the instance can start from.
 ///     <para>
-///         All four kinds share one route shape - list, then retrieve by name - but not one payload
+///         All four kinds share one route shape - list, then retrieve one template - but not one payload
 ///         shape: the three plain kinds list as <see cref="GitLabTemplateSummary" /> (key and name only)
 ///         and retrieve as <see cref="GitLabTemplate" /> (name and content), while licenses both list and
 ///         retrieve as the fully described <see cref="GitLabLicenseTemplate" />.
@@ -63,12 +64,12 @@ public interface ITemplatesClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Gets one license template by name (<c>Apache-2.0</c>, <c>MIT License</c>), optionally with its
-    ///     copyright placeholders already filled in.
+    ///     Gets one license template by its <see cref="GitLabLicenseTemplate.Key" /> (for example,
+    ///     <c>apache-2.0</c> or <c>mit</c>), optionally with its copyright placeholders already filled in.
     /// </summary>
     /// <param name="name">
-    ///     The license name or key. Passed percent-encoded, so values containing <c>.</c>, <c>+</c> or a
-    ///     space need no preparation by the caller.
+    ///     The license key returned by <see cref="ListLicensesAsync" />, not
+    ///     <see cref="GitLabLicenseTemplate.Name" />. It is percent-encoded in the route.
     /// </param>
     /// <param name="project">
     ///     The copyrighted project's name. Substituted for the <c>[project]</c> placeholder in

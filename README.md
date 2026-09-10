@@ -1,23 +1,38 @@
 # GitLab.Client
 
-A fully-typed, dependency-injection-first C# client for the [GitLab REST API (v4)](https://docs.gitlab.com/ee/api/rest/), targeting **GitLab 19.x and above**. Built on **C# 14 / .NET 10**, it is **Native AOT and trimming friendly** end to end — every DTO is serialized through `System.Text.Json` source generators, there is no reflection-based JSON, configuration binding, or DI scanning anywhere in the library, and the public surface publishes as a single `GitLab.Client` NuGet package consumed purely through `services.AddGitLabClient(...)`.
+`GitLab.Client` est un SDK .NET typé pour communiquer avec l’API REST v4 et l’API GraphQL officielle de GitLab. Il permet à une application .NET d’intégrer GitLab.com ou une instance GitLab auto gérée avec des contrats C# explicites, une intégration native à l’injection de dépendances et une exécution asynchrone.
 
-Every resource client (Projects, MergeRequests, Pipelines, Issues, and well over a hundred more) follows the same generated `Controllers → Services → Repositories` layering on top of a shared HTTP/serialization core, is independently injectable, and is also reachable off a single root `IGitLabClient`. See [Coverage](#coverage) for exactly how much of the GitLab API surface that spans today.
+Le projet cible GitLab 19.x et versions ultérieures. GitLab 19.0 est la version minimale prise en charge ; les contrats REST sont construits à partir d’une spécification OpenAPI GitLab 19.4 épinglée dans le dépôt. L’API REST GitLab reste versionnée `v4`, tandis que GraphQL utilise son endpoint versionless `/api/graphql`.
 
-## Table of contents
+## Ce que fournit la bibliothèque
 
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Configuration](#configuration)
-- [Architecture](#architecture)
-  - [Every resource, two ways to reach it](#every-resource-two-ways-to-reach-it)
-  - [Typed exceptions](#typed-exceptions)
-  - [Streaming pagination](#streaming-pagination)
-  - [Native AOT and trimming](#native-aot-and-trimming)
-- [Coverage](#coverage)
-- [Contributing](#contributing)
-- [Security](#security)
-- [License](#license)
+1. Des clients REST directs et typés pour plus d’une centaine de domaines GitLab, accessibles depuis `IGitLabClient` ou injectables individuellement.
+
+2. Des DTO, requêtes, réponses, identifiants de projet et de groupe, options de filtrage et exceptions HTTP spécialisés pour les routes GitLab.
+
+3. Une intégration `IHttpClientFactory` via `services.AddGitLabClient(...)`, avec authentification par jeton personnel, OAuth Bearer ou jeton de job GitLab.
+
+4. La pagination asynchrone par `IAsyncEnumerable<T>`, qui suit les liens de pagination GitLab sans charger toutes les pages en mémoire.
+
+5. Une façade GraphQL comprenant un exécuteur typé pour vos documents, le multiplexage GitLab et une surface dédiée aux Work Items.
+
+6. Des plans de batch asynchrones à concurrence bornée pour exécuter ensemble des appels REST et GraphQL indépendants.
+
+7. Des mappers purs qui assemblent des DTO déjà chargés en objets de composition riches, sans appel HTTP caché, cache implicite ni lazy loading.
+
+## Compatibilité
+
+| Élément | Valeur |
+| :--- | :--- |
+| Package NuGet | `GitLab.Client` |
+| Runtime consommateur | .NET 10, `net10.0` |
+| Langage | C# 14 |
+| GitLab minimum | GitLab 19.0 |
+| Référence OpenAPI REST incluse | GitLab 19.4 |
+| APIs | REST v4 et GraphQL |
+| Licence | MIT |
+
+Le package final est unique. Il contient les assemblies Contracts, Routing, Http et la façade `GitLab.Client` ; aucune dépendance NuGet GitLab interne supplémentaire ne doit être installée.
 
 ## Installation
 
@@ -25,15 +40,14 @@ Every resource client (Projects, MergeRequests, Pipelines, Issues, and well over
 dotnet add package GitLab.Client
 ```
 
-The library targets `net10.0` and has no dependency beyond `Microsoft.Extensions.Http`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Options`, and `Microsoft.Extensions.Logging.Abstractions`.
+Le point d’entrée est l’extension `AddGitLabClient`. Une application inscrit la bibliothèque une seule fois dans son conteneur de services.
 
-## Quickstart
+## Démarrage rapide
 
-Register the client with dependency injection, then resolve `IGitLabClient` (or any single resource client) from the container. This example is adapted from the Native AOT smoke test at `samples/GitLab.Client.AotHarness/Program.cs`, which is published with `PublishAot=true` and treats any trim/AOT warning as a build break:
+Le code suivant configure un client pour GitLab.com, résout le client racine et charge un projet par son chemin d’espace de noms.
 
 ```csharp
 using GitLab.Client.Abstractions;
-using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Models;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -41,134 +55,223 @@ using Microsoft.Extensions.DependencyInjection;
 ServiceCollection services = new();
 
 services.AddGitLabClient(options =>
-    options.AccessToken = Environment.GetEnvironmentVariable("GITLAB_TOKEN") ?? "glpat-example-token");
+{
+    options.AccessToken = Environment.GetEnvironmentVariable("GITLAB_TOKEN")
+        ?? throw new InvalidOperationException("The GITLAB_TOKEN environment variable is required.");
+});
 
 await using ServiceProvider provider = services.BuildServiceProvider();
 
 IGitLabClient gitLab = provider.GetRequiredService<IGitLabClient>();
+GitLabProject project = await gitLab.Projects.GetAsync("group/subgroup/project");
 
-try
-{
-    GitLabProject project = await gitLab.Projects.GetAsync("gitlab-org/gitlab");
-    Console.WriteLine($"{project.PathWithNamespace} ({project.Visibility}): {project.WebUrl}");
-}
-catch (GitLabAuthenticationException ex)
-{
-    Console.WriteLine($"GitLab rejected the token: {ex.Message}");
-}
-catch (GitLabNotFoundException ex)
-{
-    Console.WriteLine($"Project not found or not visible to this token: {ex.Message}");
-}
+Console.WriteLine(project.WebUrl);
 ```
 
-`gitLab.Projects` is one property among 143 on `IGitLabClient` — every resource this library wraps is reachable the same way (`gitLab.MergeRequests`, `gitLab.Pipelines`, `gitLab.Issues`, and so on). Each of those is also independently injectable — see [Every resource, two ways to reach it](#every-resource-two-ways-to-reach-it).
+Le client accepte un identifiant numérique ou un chemin GitLab pour les projets et groupes lorsque la route GitLab le permet. Les segments de chemin sont encodés par la bibliothèque, ce qui évite les erreurs fréquentes avec les espaces de noms imbriqués.
 
 ## Configuration
 
-As shown above, `AddGitLabClient` currently takes a delegate against `GitLabClientOptions`:
+Par défaut, le client utilise `https://gitlab.com/api/v4/`. Pour une instance auto gérée, configurez la racine REST avec son slash final.
 
 ```csharp
 services.AddGitLabClient(options =>
 {
-    options.BaseAddress = new Uri("https://gitlab.example.com/api/v4/"); // defaults to https://gitlab.com/api/v4/
-    options.AccessToken = "glpat-...";
-    options.AuthenticationMode = GitLabAuthenticationMode.PersonalAccessToken; // or OAuthBearer, JobToken
-    options.UserAgent = "MyApp/1.0";
+    options.BaseAddress = new Uri("https://gitlab.example.com/api/v4/");
+    options.AccessToken = Environment.GetEnvironmentVariable("GITLAB_TOKEN");
+    options.UserAgent = "MyProduct/1.0";
     options.Timeout = TimeSpan.FromSeconds(100);
 });
 ```
 
-| Option | Default | Notes |
-|---|---|---|
-| `BaseAddress` | `https://gitlab.com/api/v4/` | Point this at a self-managed instance's `/api/v4/` root. Must keep the trailing slash. |
-| `AccessToken` | `null` | A personal access token, OAuth token, or CI job token, depending on `AuthenticationMode`. |
-| `AuthenticationMode` | `PersonalAccessToken` | Selects the header: `PRIVATE-TOKEN`, `Authorization: Bearer`, or `JOB-TOKEN` respectively. |
-| `UserAgent` | `GitLab.Client/1.0` | Sent as the `User-Agent` header on every request. |
-| `Timeout` | 100 seconds | Applied via a linked cancellation token, so it also bounds a response whose headers arrived but whose body stalls. |
+L’authentification utilise un jeton personnel par défaut. `GitLabAuthenticationMode` permet aussi de sélectionner OAuth Bearer ou un jeton de job GitLab. Les jetons doivent être fournis par un mécanisme adapté à votre application, par exemple des variables d’environnement, le gestionnaire de secrets .NET ou un coffre de secrets.
 
-### From `appsettings.json`
+L’endpoint GraphQL est automatiquement dérivé de l’adresse REST. Il peut être configuré explicitement pour une installation inhabituelle, mais il doit rester sur la même origine afin que les identifiants ne soient jamais envoyés à un autre hôte.
 
-`AddGitLabClient` also has an `IConfiguration` overload, binding `GitLabClientOptions` from a configuration section (`"GitLab"` by default):
+### Configuration avec `IConfiguration`
+
+L’intégration avec une application ASP.NET Core ou un hôte .NET peut s’appuyer directement sur une section de configuration nommée `GitLab`.
 
 ```json
 {
   "GitLab": {
-    "BaseAddress": "https://gitlab.com/api/v4/",
+    "BaseAddress": "https://gitlab.example.com/api/v4/",
     "AccessToken": ""
   }
 }
 ```
 
 ```csharp
-IConfiguration configuration = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: true)
-    .AddEnvironmentVariables()
-    .Build();
-
-services.AddGitLabClient(configuration); // binds the "GitLab" section; pass a second string argument for a different section name
+builder.Services.AddGitLabClient(builder.Configuration);
 ```
 
-Any key omitted from the section keeps `GitLabClientOptions`'s own default (`BaseAddress` still resolves to `gitlab.com` if left out). Binding goes through the source-generated Configuration Binder (`EnableConfigurationBindingGenerator`), not reflection, so it stays Native AOT/trim-safe. See [`samples/GitLab.Client.AotHarness`](samples/GitLab.Client.AotHarness) for a complete example that falls back to a `GITLAB_TOKEN` environment variable when the configured token is empty.
+Vous pouvez fournir un nom de section différent avec `AddGitLabClient(configuration, "MyGitLab")`.
 
-`AddGitLabClient` returns an `IHttpClientBuilder`, so you can chain your own handlers or resilience policies (e.g. `Microsoft.Extensions.Http.Resilience`) onto the same named HTTP client the library uses internally.
+## Utiliser l’API REST
 
-## Architecture
+Chaque domaine GitLab est une propriété du client racine. Les clients sont également injectables individuellement lorsqu’un composant n’a besoin que d’une seule zone API.
 
-The library is organized as a DDD-flavoured `Controllers → Services → Repositories` chain per resource, on top of a shared HTTP/serialization core. Three Roslyn incremental source generators keep that repetitive per-resource plumbing out of the hand-written surface: one emits the `Controller`/`Service` forwarding pair for every repository interface marked `[GenerateClientLayers]`, one collects all of those to generate both the DI registrations and the `IGitLabClient` root aggregate, and one turns `*ListOptions` records into query-string builders. The full design — including why each of these generators exists and the conventions every resource follows — is documented in [`CLAUDE.md`](CLAUDE.md); the summary below covers what matters to a consumer.
+```csharp
+using GitLab.Client.Abstractions;
+using GitLab.Client.Models;
+using GitLab.Client.Query;
 
-### Every resource, two ways to reach it
+public sealed class ProjectCatalog(IProjectsClient projects)
+{
+    public async Task<IReadOnlyList<GitLabProject>> GetMembershipAsync(
+        CancellationToken cancellationToken)
+    {
+        List<GitLabProject> result = [];
 
-Every resource is exposed as a property on the root `IGitLabClient` (`gitLab.Projects`, `gitLab.MergeRequests`, `gitLab.Pipelines`, ...) **and** independently injectable via its own interface (`IProjectsClient`, `IMergeRequestsClient`, ...), so a consumer that only needs one or two resources doesn't have to take on the whole aggregate.
+        await foreach (GitLabProject project in projects.ListAsync(
+            new ProjectListOptions { Membership = true },
+            cancellationToken))
+        {
+            result.Add(project);
+        }
 
-### Typed exceptions
+        return result;
+    }
+}
+```
 
-Every failed call throws from a hierarchy rooted at `GitLabApiException`, with seven derived types so callers can catch exactly the failure mode they care about:
+Les méthodes de lecture, création, mise à jour et suppression utilisent des DTO propres à leur route. Les listes retournent des séquences asynchrones. Les méthodes asynchrones acceptent un `CancellationToken` en dernier paramètre afin que l’annulation de votre application soit propagée au transport HTTP.
 
-- `GitLabAuthenticationException` — 401
-- `GitLabForbiddenException` — 403
-- `GitLabNotFoundException` — 404
-- `GitLabConflictException` — 409
-- `GitLabValidationException` — 400 / 422, carrying GitLab's per-field validation errors
-- `GitLabRateLimitExceededException` — 429, carrying `RetryAfter` and a rate-limit snapshot
-- `GitLabServerException` — 5xx
+## Gérer les erreurs GitLab
 
-`catch (GitLabApiException)` still catches all of them. Transport-level failures are deliberately left unwrapped: DNS/TLS/socket errors surface as `HttpRequestException`, and cancellation surfaces as `OperationCanceledException`.
+Les réponses HTTP non réussies sont converties en exceptions spécialisées dérivées de `GitLabApiException`. Une application peut distinguer une erreur d’authentification, une absence de ressource, une validation, une limite de débit ou une erreur serveur.
 
-### Streaming pagination
+```csharp
+using GitLab.Client.Abstractions.Exceptions;
 
-List operations return `IAsyncEnumerable<T>`, following GitLab's RFC 5988 `Link: rel="next"` header page by page rather than buffering an eager `List<T>` of the whole collection.
+try
+{
+    await gitLab.Projects.GetAsync("group/project", cancellationToken);
+}
+catch (GitLabAuthenticationException)
+{
+    // Le jeton est absent, invalide ou expiré.
+}
+catch (GitLabNotFoundException)
+{
+    // Le projet est absent ou non visible pour ce jeton.
+}
+catch (GitLabRateLimitExceededException exception)
+{
+    // exception.RetryAfter contient l’information fournie par GitLab lorsqu’elle existe.
+}
+```
 
-### Native AOT and trimming
+Les erreurs réseau restent des `HttpRequestException` et une annulation reste une `OperationCanceledException`. Cela préserve les conventions .NET habituelles.
 
-The library builds with `IsAotCompatible` and `IsTrimmable` enabled and `TreatWarningsAsErrors` on IL trim/AOT diagnostics — no `dynamic`, no reflection-based JSON or configuration binding, no assembly scanning for DI, and a `sealed`-by-default public surface. `samples/GitLab.Client.AotHarness` is a real Native AOT publish target (`dotnet publish samples/GitLab.Client.AotHarness -c Release -r win-x64`) that exercises DI registration, the root client, and one live resource call end to end, and is the gate this repository verifies against for every change.
+## GraphQL et Work Items
 
-## Coverage
+`gitLab.GraphQL` donne accès à l’API GraphQL officielle sur `/api/graphql`. Les opérations GraphQL renvoient l’enveloppe complète, car GitLab peut répondre avec des données partielles et des erreurs GraphQL dans une réponse HTTP réussie.
 
-Coverage against GitLab's OpenAPI spec (vendored at `spec/openapi_v3.yaml`) is tracked in [`ROADMAP.md`](ROADMAP.md), which is regenerated from a full per-tag audit rather than hand-counted. As of the most recent audit:
+La façade `gitLab.GraphQL.WorkItems` propose des opérations typées pour les Work Items. Cet exemple recherche un Work Item par espace de noms et IID.
 
-| | |
-|---|---|
-| Resources implemented | **143** distinct repository interfaces, each with the full generated layering |
-| Operations in the spec | 1847, across 170 tags |
-| Operations verified implemented | **1683** (**91.1%** of the whole spec) |
-| Coverage of the in-scope surface (excluding deliberately-parked deprecated tags/operations) | **1683 / 1683 = 100%** |
-| Tests | **2387**, all passing |
-| Build warnings | **0** (`TreatWarningsAsErrors` + `AnalysisLevel=latest-all`) |
-| Native AOT publish | Clean — **0** IL2xxx/IL3xxx trim/AOT warnings |
+```csharp
+using GitLab.Client.GraphQL.Protocol;
+using GitLab.Client.GraphQL.WorkItems;
 
-See [`ROADMAP.md`](ROADMAP.md) for the remaining genuine gaps, what is deliberately out of scope (deprecated GitLab API surface, per the version-baseline policy below), and why.
+GitLabWorkItemLocator locator = new("group/subgroup", 42);
 
-GitLab 19.x is the floor: anything the spec marks as introduced in 19.0–19.4 is fair game, and prose- or flag-deprecated surface is deliberately excluded rather than wrapped — see `CLAUDE.md`'s *Version baseline* section for the exact policy.
+GitLabGraphQLResponse<GitLabWorkItemByLocatorQueryData> response =
+    await gitLab.GraphQL.WorkItems.GetAsync(locator, cancellationToken);
 
-## Contributing
+GitLabWorkItem? workItem = response.Data?.Namespace?.WorkItem;
 
-The architecture, generator internals, routing/JSON/error-handling conventions, and build/test commands are documented in [`CLAUDE.md`](CLAUDE.md) at the repository root — read it before making a change, especially before adding a new resource or touching the source generators. Pull requests are reviewed against [`CODEOWNERS`](CODEOWNERS), and the templates under [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE) and [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) describe the information an issue or PR should include.
+if (response.HasErrors)
+{
+    // Inspectez response.Errors tout en conservant les données partielles disponibles.
+}
+```
 
-## Security
+Pour un document GraphQL propre à votre application, `ExecuteAsync<TData>` et `ExecuteBatchAsync<TData>` demandent un `JsonTypeInfo<T>` produit par votre propre contexte `System.Text.Json` généré à la compilation. Le type de réponse est ainsi connu au compilateur, au trimmer et au compilateur Native AOT.
 
-See [`SECURITY.md`](SECURITY.md) for the supported-versions policy and how to report a vulnerability privately.
+GitLab supporte le multiplexage GraphQL. `ExecuteBatchAsync<TData>` transmet plusieurs documents de même forme dans une seule requête HTTP et conserve l’ordre des enveloppes retournées. Ce mécanisme est distinct d’un batch REST et ne contourne ni les limites de complexité, ni les autorisations, ni les quotas GitLab.
 
-## License
+## Batch asynchrone et parallélisme
 
-Licensed under the [MIT License](LICENSE).
+`gitLab.Batches` orchestre des appels indépendants avec une concurrence maximale explicite. Ce mécanisme est local au client : GitLab REST v4 ne propose pas une route universelle qui combine arbitrairement plusieurs endpoints REST en une seule requête HTTP.
+
+```csharp
+using GitLab.Client.Batching;
+using GitLab.Client.GraphQL.Protocol;
+using GitLab.Client.GraphQL.WorkItems;
+using GitLab.Client.Models;
+
+GitLabWorkItemLocator locator = new("group", 42);
+
+GitLabBatchPlan plan = gitLab.Batches.Create(new GitLabBatchOptions
+{
+    MaxConcurrency = 4,
+    FailureMode = GitLabBatchFailureMode.CollectAll
+});
+
+GitLabBatchOperation<GitLabProject> projectOperation =
+    plan.Add(ct => gitLab.Projects.GetAsync("group/project", ct));
+
+GitLabBatchOperation<GitLabGraphQLResponse<GitLabWorkItemByLocatorQueryData>> workItemOperation =
+    plan.Add(ct => gitLab.GraphQL.WorkItems.GetAsync(locator, ct));
+
+GitLabBatchExecution execution = await plan.ExecuteAsync(cancellationToken);
+
+if (projectOperation.TryGetResult(execution, out GitLabProject? project) && project is not null)
+{
+    Console.WriteLine(project.WebUrl);
+}
+```
+
+`CollectAll` conserve les résultats réussis et les erreurs individuelles. `FailFast` arrête la planification et annule coopérativement les opérations qui sont encore en cours après le premier échec. Un plan est différé et à usage unique : l’ajout d’une opération ne démarre pas de requête et une exécution ne rejoue jamais une mutation par accident.
+
+La limite est appliquée par plan, non comme un rate limiter global. Le suivi des limites GitLab reste observateur afin que votre application garde le contrôle de sa stratégie de quota et de reprise.
+
+## Mappers et compositions
+
+`gitLab.Mappers` assemble localement des DTO issus de routes REST et GraphQL en compositions plus riches. Un mapper ne fait jamais de requête, ne charge jamais de données implicitement et ne modifie pas les DTO reçus. Les appels, la pagination, la mise en cache et le parallélisme restent donc visibles dans votre application.
+
+```csharp
+using GitLab.Client.Composition;
+using GitLab.Client.Models;
+
+GitLabProject project = await gitLab.Projects.GetAsync("group/project", cancellationToken);
+
+GitLabProjectComposition composition = gitLab.Mappers.Projects.Map(
+    new GitLabProjectCompositionInput { Project = project },
+    GitLabProjectCompositionLoadPlan.ProjectOnly);
+```
+
+Les batches sont particulièrement utiles avant une composition : chargez les DTO indépendants en parallèle, inspectez les résultats disponibles, puis passez uniquement les données effectivement obtenues au mapper adapté.
+
+## Native AOT, trimming et générateurs de source
+
+La bibliothèque cible .NET 10 et C# 14. Elle est conçue pour être compatible avec Native AOT et le trimming.
+
+1. Les DTO REST et GraphQL utilisent des contextes `System.Text.Json` générés à la compilation. La bibliothèque n’utilise pas la sérialisation JSON par réflexion.
+
+2. Le binding de configuration de `AddGitLabClient(IConfiguration)` utilise le générateur de configuration .NET.
+
+3. Les générateurs Roslyn internes produisent le câblage déterministe du client racine et de l’injection de dépendances, ainsi que la projection des options de requête vers les paramètres HTTP.
+
+4. Aucun scan d’assembly, `dynamic`, génération de code à l’exécution ou découverte de services par réflexion n’est nécessaire au fonctionnement normal du SDK.
+
+Le choix de `System.Text.Json` généré à la compilation améliore le démarrage, limite les allocations privées et facilite le trimming. Consultez la documentation Microsoft sur la [sérialisation par réflexion et la génération de source](https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/reflection-vs-source-generation) pour le contexte général de cette approche.
+
+## Transport HTTP
+
+Le SDK s’appuie sur `IHttpClientFactory` et un client HTTP nommé. Il réutilise le pipeline standard de .NET pour l’authentification, les délais, la décompression, l’observation des en têtes de rate limit et les exceptions typées.
+
+Le transport demande HTTP/2 lorsque l’instance le propose et peut revenir à HTTP/1.1 pour les installations qui ne le prennent pas en charge. Les nouvelles tentatives sont réservées aux méthodes HTTP sûres ; une mutation REST ou GraphQL n’est pas rejouée implicitement.
+
+## Promesse de compatibilité
+
+`GitLab.Client` promet une intégration .NET 10 moderne, des contrats C# explicites et une consommation directe des APIs REST v4 et GraphQL de GitLab 19.x et ultérieures.
+
+Le SDK ne prétend pas rendre immuable le schéma GraphQL GitLab ni prendre en charge les instances antérieures à GitLab 19.0. Pour les zones GraphQL évolutives qui ne disposent pas encore d’une façade spécialisée, utilisez l’exécuteur générique avec un contrat de réponse et un contexte JSON généré dans votre application.
+
+Les références officielles GitLab restent la source fonctionnelle pour les droits requis, les champs disponibles, les limites et les évolutions serveur : [REST API](https://docs.gitlab.com/api/rest/) et [GraphQL API](https://docs.gitlab.com/api/graphql/).
+
+## Licence et sécurité
+
+Le projet est distribué sous [licence MIT](LICENSE). Consultez [SECURITY.md](SECURITY.md) pour signaler une vulnérabilité.

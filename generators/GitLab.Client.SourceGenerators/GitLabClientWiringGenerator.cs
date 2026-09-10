@@ -9,267 +9,365 @@ using Microsoft.CodeAnalysis.Text;
 namespace GitLab.Client.SourceGenerators;
 
 /// <summary>
-///     Emits the two pieces of per-resource wiring that used to be hand-edited every time a resource was
-///     added: the dependency-injection registration block, and the root aggregate implementation behind
-///     <c>IGitLabClient</c>. Both are derived from the same <c>[GenerateClientLayers]</c> attribute
-///     <see cref="GenerateClientLayersGenerator" /> reads, so adding a resource costs one line on
-///     <c>IGitLabClient</c> instead of edits to three shared files.
+///     Emits the compile-time composition root for the direct endpoint architecture. The public
+///     <c>IGitLabClient</c> interface is the single, reviewable inventory of resource clients; every
+///     <c>I&lt;Resource&gt;Client</c> property maps to the hand-written
+///     <c>GitLab.Client.Endpoints.&lt;Resource&gt;Client</c> implementation.
 ///     <para>
-///         The emitted registrations name <c>&lt;Resource&gt;Service</c> and
-///         <c>&lt;Resource&gt;Controller</c>, which the other generator produces. That works because every
-///         generator's output is added to the SAME compilation and the compiler binds the merged result:
-///         generated code may freely REFERENCE generated code. What is impossible is ANALYSING it - each
-///         generator reads the compilation as it stood before generation - so nothing here looks those
-///         types up. It composes their names from <see cref="ClientLayerNaming" /> and prints them. The
-///         marker attribute is the one thing that does cross generators, and it travels over the
-///         post-initialization channel, which is documented as visible to later phases.
-///     </para>
-///     <para>
-///         This generator must never call <c>AddEmbeddedAttributeDefinition</c> or emit
-///         <c>GenerateClientLayersAttribute</c>: both generators live in one assembly and their post-init
-///         sources land in one compilation, so a second copy would define the type twice (CS0101).
+///         The generator deliberately analyses only types already present in the facade compilation. It does
+///         not depend on output of another source generator, perform assembly scanning, or introduce runtime
+///         reflection. A missing or incompatible endpoint is an actionable compiler diagnostic rather than a
+///         service-provider failure at runtime.
 ///     </para>
 /// </summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class GitLabClientWiringGenerator : IIncrementalGenerator
 {
+    private const string EndpointNamespace = "GitLab.Client.Endpoints";
     private const string GeneratorName = "GitLab.Client.SourceGenerators";
-
-    private const string GeneratorVersion = "1.0.0";
+    private const string GeneratorVersion = "2.0.0";
 
     private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
+    private static readonly DiagnosticDescriptor InvalidResourceClientProperty = new(
+        "GLC0201",
+        "Root client property must expose a public resource-client interface",
+        "Property '{0}' on IGitLabClient is invalid: {1}. It must be a public, non-generic I<Resource>Client " +
+        "interface instance property with a getter and no setter.",
+        "GitLab.Client.Wiring",
+        DiagnosticSeverity.Error,
+        true);
+
+    private static readonly DiagnosticDescriptor MissingEndpointImplementation = new(
+        "GLC0202",
+        "Direct endpoint implementation is missing or incompatible",
+        "Property '{0}' requires endpoint '{1}', a non-abstract class implementing '{2}'",
+        "GitLab.Client.Wiring",
+        DiagnosticSeverity.Error,
+        true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<ResourceWiringModel> resources = context.SyntaxProvider
-            .ForAttributeWithMetadataName(
-                ClientLayerNaming.AttributeFullName,
-                static (node, _) => node is InterfaceDeclarationSyntax,
-                static (ctx, _) => TryCreateModel(ctx))
-            .Where(static model => model.HasValue)
-            .Select(static (model, _) => model!.Value)
-            .WithTrackingName(TrackingNames.WiringModels);
+        // Do not use CompilationProvider here. It invalidates on every edit in the consumer project,
+        // including DTO and endpoint-method changes that cannot affect the composition root. The two
+        // syntax providers below each track precisely the declarations that participate in wiring.
+        IncrementalValuesProvider<bool> rootInterfaces = context.SyntaxProvider.CreateSyntaxProvider(
+                static (node, _) => node is InterfaceDeclarationSyntax
+                {
+                    Identifier.ValueText: "IGitLabClient"
+                },
+                static (syntaxContext, _) => IsRootClientInterface(syntaxContext))
+            .Where(static isRootClient => isRootClient);
 
-        // Collect() hands back an ImmutableArray, whose equality is by REFERENCE - so the projection
-        // into a value-equatable EquatableArray is not cosmetic: without it the output node below would
-        // fire on every single run and re-render both files on every keystroke.
-        IncrementalValueProvider<EquatableArray<ResourceWiringModel>> sorted = resources
-            .Collect()
-            .Select(static (models, _) => Sort(models))
-            .WithTrackingName(TrackingNames.SortedWiringModels);
+        IncrementalValuesProvider<RootPropertyModel> rootProperties = context.SyntaxProvider.CreateSyntaxProvider(
+                static (node, _) => node is PropertyDeclarationSyntax or IndexerDeclarationSyntax &&
+                                    node.Parent is InterfaceDeclarationSyntax
+                                    {
+                                        Identifier.ValueText: "IGitLabClient"
+                                    },
+                static (syntaxContext, _) => TryCreateRootProperty(syntaxContext))
+            .Where(static property => property is not null)
+            .Select(static (property, _) => property!.Value)
+            // Roslyn recreates semantic symbols when any compilation tree is added. The models are
+            // immutable value snapshots, so compare their observable content rather than the symbol
+            // graph (or an ImmutableArray backing store) and keep unrelated edits downstream-cached.
+            .WithComparer(RootPropertyModelComparer.Instance);
 
-        context.RegisterSourceOutput(sorted, static (spc, models) => Emit(spc, models));
-    }
+        IncrementalValuesProvider<EndpointClientModel> endpointClients = context.SyntaxProvider.CreateSyntaxProvider(
+                static (node, _) => node is ClassDeclarationSyntax { Identifier.ValueText: var identifier } &&
+                                    identifier.EndsWith("Client", StringComparison.Ordinal),
+                static (syntaxContext, _) => TryCreateEndpointClient(syntaxContext))
+            .Where(static endpoint => endpoint is not null)
+            .Select(static (endpoint, _) => endpoint!.Value)
+            .WithComparer(EndpointClientModelComparer.Instance);
 
-    /// <summary>
-    ///     Ordinal, never culture-aware, with a total-order tiebreak, so the generated files are
-    ///     byte-identical on every machine under <c>Deterministic=true</c> and their <c>obj/Generated</c>
-    ///     diff stays reviewable.
-    /// </summary>
-    private static EquatableArray<ResourceWiringModel> Sort(ImmutableArray<ResourceWiringModel> models)
-    {
-        if (models.IsDefaultOrEmpty)
+        IncrementalValueProvider<WiringInput> wiringInput = rootInterfaces.Collect()
+            .Combine(rootProperties.Collect())
+            .Combine(endpointClients.Collect())
+            .Select(static (inputs, _) => new WiringInput(
+                inputs.Left.Left,
+                inputs.Left.Right,
+                inputs.Right))
+            .WithComparer(WiringInputComparer.Instance)
+            .WithTrackingName("GitLabClientWiring.Input");
+
+        context.RegisterSourceOutput(wiringInput, static (productionContext, input) =>
         {
-            return EquatableArray<ResourceWiringModel>.Empty;
-        }
+            if (input.RootInterfaces.IsDefaultOrEmpty)
+            {
+                return;
+            }
 
-        ResourceWiringModel[] ordered = models.ToArray();
-
-        Array.Sort(ordered, static (left, right) =>
-        {
-            int byResource = string.CompareOrdinal(left.ResourceName, right.ResourceName);
-            return byResource != 0
-                ? byResource
-                : string.CompareOrdinal(left.RepositoryInterface, right.RepositoryInterface);
+            List<ResourceClient> resources = CollectResources(input.RootProperties, input.EndpointClients,
+                productionContext);
+            productionContext.AddSource("GitLabClient.Registrations.g.cs",
+                SourceText.From(RenderRegistrations(resources), Encoding.UTF8));
+            productionContext.AddSource("GitLabClient.Root.g.cs",
+                SourceText.From(RenderRootClient(resources), Encoding.UTF8));
         });
-
-        return new EquatableArray<ResourceWiringModel>(ordered);
     }
 
-    private static ResourceWiringModel? TryCreateModel(GeneratorAttributeSyntaxContext ctx)
+    private static bool IsRootClientInterface(GeneratorSyntaxContext syntaxContext)
     {
-        if (ctx.TargetSymbol is not INamedTypeSymbol repositoryInterface ||
-            repositoryInterface.ContainingNamespace.IsGlobalNamespace)
+        return syntaxContext.Node is InterfaceDeclarationSyntax declaration &&
+               syntaxContext.SemanticModel.GetDeclaredSymbol(declaration) is INamedTypeSymbol type &&
+               IsRootClientInterface(type);
+    }
+
+    private static RootPropertyModel? TryCreateRootProperty(GeneratorSyntaxContext syntaxContext)
+    {
+        IPropertySymbol? property = syntaxContext.Node switch
+        {
+            PropertyDeclarationSyntax declaration => syntaxContext.SemanticModel.GetDeclaredSymbol(declaration),
+            IndexerDeclarationSyntax declaration => syntaxContext.SemanticModel.GetDeclaredSymbol(declaration),
+            _ => null
+        };
+
+        if (property is null || !IsRootClientInterface(property.ContainingType))
         {
             return null;
         }
 
-        AttributeData? attribute = ctx.Attributes.FirstOrDefault();
+        RootPropertyIssue issue = GetRootPropertyIssue(property, out INamedTypeSymbol? resourceInterface);
+        return new RootPropertyModel(
+            property.IsIndexer ? "this[]" : property.Name,
+            resourceInterface?.ToDisplayString(TypeFormat),
+            resourceInterface is null ? null : resourceInterface.Name.Substring(1),
+            issue,
+            property.Locations.FirstOrDefault() ?? Location.None);
+    }
 
-        if (attribute is null || attribute.ConstructorArguments.Length != 2)
+    private static EndpointClientModel? TryCreateEndpointClient(GeneratorSyntaxContext syntaxContext)
+    {
+        if (syntaxContext.Node is not ClassDeclarationSyntax declaration ||
+            syntaxContext.SemanticModel.GetDeclaredSymbol(declaration) is not INamedTypeSymbol endpoint ||
+            !string.Equals(endpoint.ContainingNamespace.ToDisplayString(), EndpointNamespace,
+                StringComparison.Ordinal))
         {
             return null;
         }
 
-        INamedTypeSymbol? serviceInterface = AsInterface(attribute.ConstructorArguments[0]);
-        INamedTypeSymbol? clientInterface = AsInterface(attribute.ConstructorArguments[1]);
+        ImmutableArray<string> implementedInterfaces = endpoint.AllInterfaces
+            .Select(static candidate => candidate.ToDisplayString(TypeFormat))
+            .OrderBy(static candidate => candidate, StringComparer.Ordinal)
+            .ToImmutableArray();
 
-        if (serviceInterface is null || clientInterface is null)
-        {
-            // GenerateClientLayersGenerator already reports GLC0001 (or the compiler reported CS0246);
-            // a second diagnostic for the same mistake would be noise.
-            return null;
-        }
-
-        string resourceName = ClientLayerNaming.GetResourceName(repositoryInterface.Name);
-
-        if (resourceName.Length == 0)
-        {
-            return null;
-        }
-
-        string repositoryNamespace = repositoryInterface.ContainingNamespace.ToDisplayString();
-        string serviceNamespace = NamedArgument(attribute, "ServiceNamespace") as string ??
-                                  ClientLayerNaming.DeriveLayerNamespace(repositoryNamespace,
-                                      ClientLayerNaming.ServicesLayerSegment);
-        string controllerNamespace = NamedArgument(attribute, "ControllerNamespace") as string ??
-                                     ClientLayerNaming.DeriveLayerNamespace(repositoryNamespace,
-                                         ClientLayerNaming.ControllersLayerSegment);
-
-        return new ResourceWiringModel(
-            resourceName,
-            NamedArgument(attribute, "RootPropertyName") as string ?? resourceName,
-            repositoryInterface.ToDisplayString(TypeFormat),
-            FindRepositoryImplementation(ctx.SemanticModel.Compilation, repositoryInterface, resourceName),
-            serviceInterface.ToDisplayString(TypeFormat),
-            ClientLayerNaming.ComposeGlobalTypeName(serviceNamespace,
-                resourceName + ClientLayerNaming.ServiceSuffix),
-            clientInterface.ToDisplayString(TypeFormat),
-            ClientLayerNaming.ComposeGlobalTypeName(controllerNamespace,
-                resourceName + ClientLayerNaming.ControllerSuffix),
-            NamedArgument(attribute, "Register") is not false,
-            NamedArgument(attribute, "ExposeOnRootClient") is not false,
-            clientInterface.DeclaredAccessibility == Accessibility.Public,
-            LocationInfo.CreateFrom(GetTargetLocation(ctx.TargetNode)));
+        return new EndpointClientModel(
+            endpoint.Name,
+            endpoint.ToDisplayString(TypeFormat),
+            endpoint.IsAbstract,
+            endpoint.IsGenericType,
+            implementedInterfaces);
     }
 
-    /// <summary>
-    ///     Resolves the hand-written <c>&lt;Resource&gt;Repository</c> class. This lookup is legal
-    ///     precisely because the repository implementation is hand-written and therefore present in the
-    ///     pre-generation compilation - unlike the Service and Controller classes, which are not and are
-    ///     only ever named.
-    /// </summary>
-    private static string FindRepositoryImplementation(Compilation compilation,
-        INamedTypeSymbol repositoryInterface, string resourceName)
+    private static List<ResourceClient> CollectResources(ImmutableArray<RootPropertyModel> properties,
+        ImmutableArray<EndpointClientModel> endpointClients, SourceProductionContext context)
     {
-        string metadataName = repositoryInterface.ContainingNamespace.ToDisplayString() + "." +
-                              ClientLayerNaming.GetRepositoryImplementationName(resourceName);
+        Dictionary<string, EndpointClientModel> endpoints = new(StringComparer.Ordinal);
 
-        INamedTypeSymbol? implementation = compilation.Assembly.GetTypeByMetadataName(metadataName);
-
-        if (implementation is null ||
-            implementation.TypeKind != TypeKind.Class ||
-            implementation.IsAbstract ||
-            implementation.IsGenericType)
+        foreach (EndpointClientModel endpoint in endpointClients.OrderBy(static candidate => candidate.Name,
+                     StringComparer.Ordinal))
         {
-            return string.Empty;
-        }
-
-        foreach (INamedTypeSymbol candidate in implementation.AllInterfaces)
-        {
-            if (SymbolEqualityComparer.Default.Equals(candidate, repositoryInterface))
+            // A partial endpoint can be observed once for each declaration. Its complete symbol has the
+            // same shape at every declaration, so retaining the first is deterministic and avoids a
+            // duplicate-candidate allocation in the common single-file case.
+            if (!endpoints.TryGetValue(endpoint.Name, out _))
             {
-                return implementation.ToDisplayString(TypeFormat);
+                endpoints.Add(endpoint.Name, endpoint);
             }
         }
 
-        return string.Empty;
-    }
+        List<ResourceClient> resources = new(properties.Length);
 
-    private static INamedTypeSymbol? AsInterface(TypedConstant argument)
-    {
-        return argument.Value is INamedTypeSymbol { TypeKind: TypeKind.Interface } candidate ? candidate : null;
-    }
-
-    private static object? NamedArgument(AttributeData attribute, string name)
-    {
-        foreach (KeyValuePair<string, TypedConstant> argument in attribute.NamedArguments)
+        foreach (RootPropertyModel property in properties.OrderBy(static candidate => candidate.Name,
+                     StringComparer.Ordinal))
         {
-            if (string.Equals(argument.Key, name, StringComparison.Ordinal))
+            if (property.Issue is not RootPropertyIssue.None)
             {
-                return argument.Value.Value;
-            }
-        }
-
-        return null;
-    }
-
-    private static Location GetTargetLocation(SyntaxNode node)
-    {
-        return node is InterfaceDeclarationSyntax declaration
-            ? declaration.Identifier.GetLocation()
-            : node.GetLocation();
-    }
-
-    private static void Emit(SourceProductionContext context, EquatableArray<ResourceWiringModel> models)
-    {
-        Dictionary<string, ResourceWiringModel> claimed = new(StringComparer.Ordinal);
-        List<ResourceWiringModel> registrable = new();
-        List<ResourceWiringModel> exposed = new();
-
-        foreach (ResourceWiringModel model in models)
-        {
-            // Every failure below reports one targeted error AND drops only the affected emission, so the
-            // one actionable message is not buried under a cascade of compiler errors inside generated
-            // files nobody owns.
-            if (model.RepositoryImplementation.Length == 0)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(Descriptors.MissingRepositoryImplementation,
-                    model.Location?.ToLocation(),
-                    model.RepositoryInterface,
-                    ClientLayerNaming.GetRepositoryImplementationName(model.ResourceName)));
-            }
-            else if (model.Register)
-            {
-                registrable.Add(model);
-            }
-
-            if (!model.ExposeOnRootClient)
-            {
+                context.ReportDiagnostic(Diagnostic.Create(InvalidResourceClientProperty,
+                    property.Location,
+                    property.Name,
+                    DescribeRootPropertyIssue(property.Issue)));
                 continue;
             }
 
-            if (!model.ClientInterfaceIsPublic)
+            string interfaceType = property.InterfaceType!;
+            string endpointName = property.EndpointName!;
+            string endpointMetadataName = EndpointNamespace + "." + endpointName;
+
+            if (!endpoints.TryGetValue(endpointName, out EndpointClientModel endpoint) || endpoint.IsAbstract ||
+                endpoint.IsGeneric || !endpoint.Implements(interfaceType))
             {
-                context.ReportDiagnostic(Diagnostic.Create(Descriptors.ClientInterfaceNotPublic,
-                    model.Location?.ToLocation(), model.ClientInterface));
+                context.ReportDiagnostic(Diagnostic.Create(MissingEndpointImplementation,
+                    property.Location, property.Name, endpointMetadataName, interfaceType));
                 continue;
             }
 
-            if (!SyntaxFacts.IsValidIdentifier(model.RootPropertyName))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(Descriptors.InvalidRootPropertyName,
-                    model.Location?.ToLocation(), model.RootPropertyName, model.ResourceName));
-                continue;
-            }
-
-            if (claimed.TryGetValue(model.RootPropertyName, out ResourceWiringModel owner))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(Descriptors.DuplicateRootProperty,
-                    model.Location?.ToLocation(),
-                    model.ResourceName, model.RootPropertyName, owner.ResourceName));
-                continue;
-            }
-
-            claimed.Add(model.RootPropertyName, model);
-            exposed.Add(model);
+            string memberName = ToCamelCase(property.Name);
+            resources.Add(new ResourceClient(
+                property.Name,
+                memberName,
+                EscapeIdentifier(memberName),
+                interfaceType,
+                endpoint.Type));
         }
 
-        context.AddSource("ServiceCollectionExtensions.Resources.g.cs",
-            SourceText.From(RenderRegistrations(registrable), Encoding.UTF8));
-        context.AddSource("GitLabClient.Root.g.cs",
-            SourceText.From(RenderRootClient(exposed), Encoding.UTF8));
+        return resources;
     }
 
-    private static void AppendFileHeader(StringBuilder builder)
+    private static RootPropertyIssue GetRootPropertyIssue(IPropertySymbol property,
+        out INamedTypeSymbol? resourceInterface)
+    {
+        resourceInterface = null;
+
+        if (property.IsStatic)
+        {
+            return RootPropertyIssue.Static;
+        }
+
+        if (property.IsIndexer)
+        {
+            return RootPropertyIssue.Indexer;
+        }
+
+        if (property.GetMethod is null)
+        {
+            return RootPropertyIssue.MissingGetter;
+        }
+
+        if (property.SetMethod is not null)
+        {
+            return RootPropertyIssue.HasSetter;
+        }
+
+        if (property.NullableAnnotation is NullableAnnotation.Annotated || property.Type is not INamedTypeSymbol
+            {
+                TypeKind: TypeKind.Interface,
+                IsGenericType: false,
+                DeclaredAccessibility: Accessibility.Public
+            } candidate || !IsResourceClientInterface(candidate.Name))
+        {
+            return RootPropertyIssue.InvalidType;
+        }
+
+        resourceInterface = candidate;
+        return RootPropertyIssue.None;
+    }
+
+    private static bool IsRootClientInterface(INamedTypeSymbol type)
+    {
+        return !type.IsGenericType && string.Equals(type.MetadataName, "IGitLabClient", StringComparison.Ordinal) &&
+               string.Equals(type.ContainingNamespace.ToDisplayString(), "GitLab.Client.Abstractions",
+                   StringComparison.Ordinal);
+    }
+
+    private static string DescribeRootPropertyIssue(RootPropertyIssue issue)
+    {
+        return issue switch
+        {
+            RootPropertyIssue.Static => "static properties are not supported",
+            RootPropertyIssue.Indexer => "indexers are not supported",
+            RootPropertyIssue.MissingGetter => "a getter is required",
+            RootPropertyIssue.HasSetter => "a setter is not allowed",
+            RootPropertyIssue.InvalidType =>
+                "the declared type is not a non-nullable public non-generic I<Resource>Client interface",
+            _ => throw new ArgumentOutOfRangeException(nameof(issue), issue, null)
+        };
+    }
+
+    private static bool IsResourceClientInterface(string name)
+    {
+        const string suffix = "Client";
+        return name.Length > 1 + suffix.Length && name[0] == 'I' && char.IsUpper(name[1]) &&
+               name.EndsWith(suffix, StringComparison.Ordinal);
+    }
+
+    private static string RenderRegistrations(List<ResourceClient> resources)
+    {
+        StringBuilder builder = new();
+        AppendHeader(builder);
+        builder.AppendLine("using Microsoft.Extensions.DependencyInjection.Extensions;");
+        builder.AppendLine();
+        builder.AppendLine("namespace Microsoft.Extensions.DependencyInjection;");
+        builder.AppendLine();
+        builder.AppendLine("public static partial class GitLabClientServiceCollectionExtensions");
+        builder.AppendLine("{");
+        AppendGeneratedCodeAttributes(builder, "    ");
+        builder.AppendLine(
+            "    private static partial void AddResourceClients(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
+        builder.AppendLine("    {");
+
+        foreach (ResourceClient resource in resources)
+        {
+            builder.Append("        services.TryAddSingleton<").Append(resource.InterfaceType).Append(", ")
+                .Append(resource.EndpointType).AppendLine(">();");
+        }
+
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+        return builder.ToString();
+    }
+
+    private static string RenderRootClient(List<ResourceClient> resources)
+    {
+        StringBuilder builder = new();
+        AppendHeader(builder);
+        builder.AppendLine("namespace GitLab.Client;");
+        builder.AppendLine();
+        AppendGeneratedCodeAttributes(builder, string.Empty);
+        builder.AppendLine("[global::System.Diagnostics.DebuggerNonUserCode]");
+        builder.AppendLine("internal sealed class GitLabClient : global::GitLab.Client.Abstractions.IGitLabClient");
+        builder.AppendLine("{");
+
+        foreach (ResourceClient resource in resources)
+        {
+            builder.Append("    private readonly ").Append(resource.InterfaceType).Append(" _")
+                .Append(resource.MemberName).AppendLine(";");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("    public GitLabClient(");
+
+        for (int index = 0; index < resources.Count; index++)
+        {
+            ResourceClient resource = resources[index];
+            builder.Append("        ").Append(resource.InterfaceType).Append(' ').Append(resource.ParameterName);
+            builder.AppendLine(index == resources.Count - 1 ? ")" : ",");
+        }
+
+        if (resources.Count == 0)
+        {
+            builder.AppendLine("    )");
+        }
+
+        builder.AppendLine("    {");
+
+        foreach (ResourceClient resource in resources)
+        {
+            builder.Append("        _").Append(resource.MemberName).Append(" = ")
+                .Append(resource.ParameterName).AppendLine(";");
+        }
+
+        builder.AppendLine("    }");
+
+        foreach (ResourceClient resource in resources)
+        {
+            builder.AppendLine();
+            builder.Append("    ").Append(resource.InterfaceType)
+                .Append(" global::GitLab.Client.Abstractions.IGitLabClient.")
+                .Append(EscapeIdentifier(resource.PropertyName)).Append(" => _")
+                .Append(resource.MemberName)
+                .AppendLine(";");
+        }
+
+        builder.AppendLine("}");
+        return builder.ToString();
+    }
+
+    private static void AppendHeader(StringBuilder builder)
     {
         builder.AppendLine("// <auto-generated/>");
         builder.AppendLine("#nullable enable");
-        builder.AppendLine();
-        // The auto-generated header suppresses analyzers, not core compiler warnings. A resource client
-        // interface may legitimately be [Obsolete] under the deprecation policy in CLAUDE.md, and that
-        // must not become an unfixable build break inside a file nobody can edit.
-        builder.AppendLine("#pragma warning disable CS0612, CS0618");
         builder.AppendLine();
     }
 
@@ -280,130 +378,190 @@ public sealed class GitLabClientWiringGenerator : IIncrementalGenerator
         builder.Append(indent).AppendLine("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]");
     }
 
-    private static string RenderRegistrations(List<ResourceWiringModel> resources)
+    private static string ToCamelCase(string name)
     {
-        StringBuilder builder = new();
-        AppendFileHeader(builder);
-        builder.AppendLine("using Microsoft.Extensions.DependencyInjection.Extensions;");
-        builder.AppendLine();
-        builder.Append("namespace ").AppendLine(ClientLayerNaming.DependencyInjectionNamespace);
-        builder.AppendLine("{");
-        builder.Append("    public static partial class ").AppendLine(ClientLayerNaming.RegistrationClassName);
-        builder.AppendLine("    {");
-        builder.AppendLine(
-            "        // One block per resource whose Repository interface carries [GenerateClientLayers].");
-        builder.AppendLine(
-            "        // Both type arguments of every TryAddSingleton below are closed at compile time: no");
-        builder.AppendLine(
-            "        // assembly scanning, no Activator.CreateInstance, no Type-keyed lookup, no convention-");
-        builder.AppendLine(
-            "        // based reflection at runtime. Only the typing is generated - the registration is still");
-        builder.AppendLine(
-            "        // explicit, which is what the \"DI: explicit registration only\" rule in CLAUDE.md is about.");
-        AppendGeneratedCodeAttributes(builder, "        ");
-        builder.Append("        private static partial void ").Append(ClientLayerNaming.RegistrationMethodName)
-            .AppendLine("(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
-        builder.AppendLine("        {");
-
-        for (int index = 0; index < resources.Count; index++)
-        {
-            ResourceWiringModel resource = resources[index];
-
-            if (index > 0)
-            {
-                builder.AppendLine();
-            }
-
-            builder.Append("            // ").AppendLine(resource.ResourceName);
-            AppendRegistration(builder, resource.RepositoryInterface, resource.RepositoryImplementation);
-            AppendRegistration(builder, resource.ServiceInterface, resource.ServiceImplementation);
-            AppendRegistration(builder, resource.ClientInterface, resource.ControllerImplementation);
-        }
-
-        builder.AppendLine("        }");
-        builder.AppendLine("    }");
-        builder.AppendLine("}");
-        builder.AppendLine();
-        builder.AppendLine("#pragma warning restore CS0612, CS0618");
-        return builder.ToString();
+        return char.ToLowerInvariant(name[0]) + name.Substring(1);
     }
 
-    private static void AppendRegistration(StringBuilder builder, string serviceType, string implementationType)
+    private static string EscapeIdentifier(string name)
     {
-        builder.Append("            services.TryAddSingleton<").Append(serviceType).Append(", ")
-            .Append(implementationType).AppendLine(">();");
+        return SyntaxFacts.GetKeywordKind(name) == SyntaxKind.None &&
+               SyntaxFacts.GetContextualKeywordKind(name) == SyntaxKind.None
+            ? name
+            : "@" + name;
     }
 
-    private static string RenderRootClient(List<ResourceWiringModel> resources)
+    private static bool HaveEquivalentLocations(Location left, Location right)
     {
-        StringBuilder builder = new();
-        AppendFileHeader(builder);
-        builder.Append("namespace ").AppendLine(ClientLayerNaming.RootClientNamespace);
-        builder.AppendLine("{");
-        builder.AppendLine(
-            "    // Root aggregate implementation behind IGitLabClient. Every member is an EXPLICIT interface");
-        builder.AppendLine(
-            "    // implementation on purpose: that makes the C# compiler enforce the pairing in both");
-        builder.AppendLine(
-            "    // directions - a property on IGitLabClient with no attributed resource is CS0535, and an");
-        builder.AppendLine(
-            "    // attributed resource with no property on IGitLabClient is CS0539.");
-        AppendGeneratedCodeAttributes(builder, "    ");
-        builder.AppendLine("    [global::System.Diagnostics.DebuggerNonUserCode]");
-        builder.Append("    internal sealed class ").Append(ClientLayerNaming.RootClientClassName)
-            .Append(" : ").AppendLine(ClientLayerNaming.RootClientInterface);
-        builder.AppendLine("    {");
+        return left.Kind == right.Kind && left.SourceSpan.Equals(right.SourceSpan) &&
+               string.Equals(left.SourceTree?.FilePath, right.SourceTree?.FilePath, StringComparison.Ordinal);
+    }
 
-        foreach (ResourceWiringModel resource in resources)
+    private static int AppendHash(int hash, string? value)
+    {
+        return unchecked((hash * 31) + (value is null ? 0 : StringComparer.Ordinal.GetHashCode(value)));
+    }
+
+    private sealed class RootPropertyModelComparer : IEqualityComparer<RootPropertyModel>
+    {
+        public static RootPropertyModelComparer Instance { get; } = new();
+
+        public bool Equals(RootPropertyModel x, RootPropertyModel y)
         {
-            builder.Append("        private readonly ").Append(resource.ClientInterface).Append(" _")
-                .Append(ClientLayerNaming.ToCamelCase(resource.RootPropertyName)).AppendLine(";");
+            return string.Equals(x.Name, y.Name, StringComparison.Ordinal) &&
+                   string.Equals(x.InterfaceType, y.InterfaceType, StringComparison.Ordinal) &&
+                   string.Equals(x.EndpointName, y.EndpointName, StringComparison.Ordinal) && x.Issue == y.Issue &&
+                   HaveEquivalentLocations(x.Location, y.Location);
         }
 
-        if (resources.Count > 0)
+        public int GetHashCode(RootPropertyModel model)
         {
-            builder.AppendLine();
+            int hash = AppendHash(17, model.Name);
+            hash = AppendHash(hash, model.InterfaceType);
+            hash = AppendHash(hash, model.EndpointName);
+            hash = unchecked((hash * 31) + (int)model.Issue);
+            hash = unchecked((hash * 31) + (int)model.Location.Kind);
+            hash = unchecked((hash * 31) + model.Location.SourceSpan.Start);
+            hash = unchecked((hash * 31) + model.Location.SourceSpan.Length);
+            return AppendHash(hash, model.Location.SourceTree?.FilePath);
+        }
+    }
+
+    private sealed class EndpointClientModelComparer : IEqualityComparer<EndpointClientModel>
+    {
+        public static EndpointClientModelComparer Instance { get; } = new();
+
+        public bool Equals(EndpointClientModel x, EndpointClientModel y)
+        {
+            return string.Equals(x.Name, y.Name, StringComparison.Ordinal) &&
+                   string.Equals(x.Type, y.Type, StringComparison.Ordinal) && x.IsAbstract == y.IsAbstract &&
+                   x.IsGeneric == y.IsGeneric && x.ImplementedInterfaces.SequenceEqual(y.ImplementedInterfaces,
+                       StringComparer.Ordinal);
         }
 
-        builder.Append("        public ").Append(ClientLayerNaming.RootClientClassName).Append('(');
-
-        for (int index = 0; index < resources.Count; index++)
+        public int GetHashCode(EndpointClientModel model)
         {
-            if (index > 0)
+            int hash = AppendHash(17, model.Name);
+            hash = AppendHash(hash, model.Type);
+            hash = unchecked((hash * 31) + (model.IsAbstract ? 1 : 0));
+            hash = unchecked((hash * 31) + (model.IsGeneric ? 1 : 0));
+
+            foreach (string implementedInterface in model.ImplementedInterfaces)
             {
-                builder.Append(',');
+                hash = AppendHash(hash, implementedInterface);
             }
 
-            builder.AppendLine();
-            builder.Append("            ").Append(resources[index].ClientInterface).Append(' ')
-                .Append(ClientLayerNaming.EscapeIdentifier(
-                    ClientLayerNaming.ToCamelCase(resources[index].RootPropertyName)));
+            return hash;
         }
+    }
 
-        builder.AppendLine(")");
-        builder.AppendLine("        {");
+    private sealed class WiringInputComparer : IEqualityComparer<WiringInput>
+    {
+        public static WiringInputComparer Instance { get; } = new();
 
-        foreach (ResourceWiringModel resource in resources)
+        public bool Equals(WiringInput x, WiringInput y)
         {
-            string parameter = ClientLayerNaming.ToCamelCase(resource.RootPropertyName);
-            builder.Append("            _").Append(parameter).Append(" = ")
-                .Append(ClientLayerNaming.EscapeIdentifier(parameter)).AppendLine(";");
+            if (!x.RootInterfaces.SequenceEqual(y.RootInterfaces) ||
+                x.RootProperties.Length != y.RootProperties.Length ||
+                x.EndpointClients.Length != y.EndpointClients.Length)
+            {
+                return false;
+            }
+
+            for (int index = 0; index < x.RootProperties.Length; index++)
+            {
+                if (!RootPropertyModelComparer.Instance.Equals(x.RootProperties[index], y.RootProperties[index]))
+                {
+                    return false;
+                }
+            }
+
+            for (int index = 0; index < x.EndpointClients.Length; index++)
+            {
+                if (!EndpointClientModelComparer.Instance.Equals(x.EndpointClients[index], y.EndpointClients[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
-        builder.AppendLine("        }");
-
-        foreach (ResourceWiringModel resource in resources)
+        public int GetHashCode(WiringInput input)
         {
-            builder.AppendLine();
-            builder.Append("        ").Append(resource.ClientInterface).Append(' ')
-                .Append(ClientLayerNaming.RootClientInterface).Append('.').Append(resource.RootPropertyName)
-                .Append(" => _").Append(ClientLayerNaming.ToCamelCase(resource.RootPropertyName)).AppendLine(";");
-        }
+            int hash = 17;
 
-        builder.AppendLine("    }");
-        builder.AppendLine("}");
-        builder.AppendLine();
-        builder.AppendLine("#pragma warning restore CS0612, CS0618");
-        return builder.ToString();
+            foreach (bool rootInterface in input.RootInterfaces)
+            {
+                hash = unchecked((hash * 31) + (rootInterface ? 1 : 0));
+            }
+
+            foreach (RootPropertyModel property in input.RootProperties)
+            {
+                hash = unchecked((hash * 31) + RootPropertyModelComparer.Instance.GetHashCode(property));
+            }
+
+            foreach (EndpointClientModel endpoint in input.EndpointClients)
+            {
+                hash = unchecked((hash * 31) + EndpointClientModelComparer.Instance.GetHashCode(endpoint));
+            }
+
+            return hash;
+        }
+    }
+
+    private readonly record struct WiringInput(
+        ImmutableArray<bool> RootInterfaces,
+        ImmutableArray<RootPropertyModel> RootProperties,
+        ImmutableArray<EndpointClientModel> EndpointClients);
+
+    private readonly record struct RootPropertyModel(
+        string Name,
+        string? InterfaceType,
+        string? EndpointName,
+        RootPropertyIssue Issue,
+        Location Location);
+
+    private readonly record struct EndpointClientModel(
+        string Name,
+        string Type,
+        bool IsAbstract,
+        bool IsGeneric,
+        ImmutableArray<string> ImplementedInterfaces)
+    {
+        public bool Implements(string interfaceType)
+        {
+            foreach (string implementedInterface in ImplementedInterfaces)
+            {
+                if (string.Equals(implementedInterface, interfaceType, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     Rendering uses each member name in several places. Resolve its camel-cased and escaped forms
+    ///     once while building the resource model rather than repeatedly allocating them during source
+    ///     rendering for every endpoint client.
+    /// </summary>
+    private readonly record struct ResourceClient(
+        string PropertyName,
+        string MemberName,
+        string ParameterName,
+        string InterfaceType,
+        string EndpointType);
+
+    private enum RootPropertyIssue
+    {
+        None,
+        Static,
+        Indexer,
+        MissingGetter,
+        HasSetter,
+        InvalidType
     }
 }

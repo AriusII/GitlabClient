@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -47,15 +48,62 @@ public interface IApprovalRulesClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Creates a group approval rule (<c>POST /groups/:id/approval_rules</c>). Restricted to group
-    ///     administrators; only the group-scope members of the request are accepted.
+    ///     Creates a group approval rule from the legacy project-shaped request. Its project-only values are
+    ///     discarded before the request is sent. Prefer <see cref="CreateGroupAsync" /> for new code.
     /// </summary>
     Task<GitLabApprovalRule> CreateForGroupAsync(GroupId groupId, CreateApprovalRuleRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Updates a group approval rule (<c>PUT /groups/:id/approval_rules/:approval_rule_id</c>).</summary>
+    /// <summary>
+    ///     Creates a group approval rule (<c>POST /groups/:id/approval_rules</c>) with the exact group body.
+    /// </summary>
+    Task<GitLabApprovalRule> CreateGroupAsync(GroupId groupId, CreateGroupApprovalRuleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return CreateForGroupAsync(groupId,
+            new CreateApprovalRuleRequest
+            {
+                Name = request.Name,
+                ApprovalsRequired = request.ApprovalsRequired,
+                RuleType = request.RuleType,
+                UserIds = request.UserIds,
+                GroupIds = request.GroupIds
+            }, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Updates a group approval rule from the legacy project-shaped request. Its project-only values are
+    ///     discarded before the request is sent. Prefer <see cref="UpdateGroupAsync" /> for new code.
+    /// </summary>
     Task<GitLabApprovalRule> UpdateForGroupAsync(GroupId groupId, long approvalRuleId,
         UpdateApprovalRuleRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Updates a group approval rule (<c>PUT /groups/:id/approval_rules/:approval_rule_id</c>) with the exact
+    ///     group body.
+    /// </summary>
+    Task<GitLabApprovalRule> UpdateGroupAsync(GroupId groupId, long approvalRuleId,
+        UpdateGroupApprovalRuleRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.RuleType is not null)
+        {
+            throw new NotSupportedException(
+                "An implementation of IApprovalRulesClient must implement UpdateGroupAsync to send rule_type.");
+        }
+
+        return UpdateForGroupAsync(groupId, approvalRuleId,
+            new UpdateApprovalRuleRequest
+            {
+                Name = request.Name,
+                ApprovalsRequired = request.ApprovalsRequired,
+                UserIds = request.UserIds,
+                GroupIds = request.GroupIds
+            }, cancellationToken);
+    }
 
     /// <summary>
     ///     Retrieves a project's approval settings - every applicable rule plus the fallback approval count

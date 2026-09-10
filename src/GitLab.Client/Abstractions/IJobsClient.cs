@@ -1,7 +1,8 @@
-using System.Text.Json;
-
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -15,7 +16,11 @@ public interface IJobsClient
     IAsyncEnumerable<GitLabJob> ListAsync(ProjectId projectId, JobListOptions? options = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Lists the jobs that belong to one pipeline (<c>GET /projects/:id/pipelines/:pipeline_id/jobs</c>).</summary>
+    /// <summary>
+    ///     Lists a pipeline's jobs (<c>GET /projects/:id/pipelines/:pipeline_id/jobs</c>) through the Jobs
+    ///     client compatibility alias. New code that needs the pipeline-specific filters should use
+    ///     <see cref="IPipelinesClient.ListJobsAsync" /> instead.
+    /// </summary>
     IAsyncEnumerable<GitLabJob> ListForPipelineAsync(ProjectId projectId, long pipelineId,
         CancellationToken cancellationToken = default);
 
@@ -65,14 +70,12 @@ public interface IJobsClient
     // unless it is implementing a custom runner.
 
     /// <summary>
-    ///     Requests the next job for a runner to execute (<c>POST /jobs/request</c>). The response shape is
-    ///     large, deeply nested and runner-version-dependent - the spec itself types nearly every leaf as a
-    ///     bare string regardless of the field's real meaning - so it is surfaced as a raw
-    ///     <see cref="JsonElement" /> rather than as an invented strongly-typed schema. GitLab answers 204
-    ///     No Content when no job is available; that is not representable through this call today, since
-    ///     the underlying <c>PostAsync&lt;TRequest, TResponse&gt;</c> always expects a body.
+    ///     Requests the next job for a runner to execute (<c>POST /jobs/request</c>). GitLab answers 204 No
+    ///     Content when no job is available; that is not representable through this call today, since the
+    ///     underlying <c>PostAsync&lt;TRequest, TResponse&gt;</c> always expects a body.
     /// </summary>
-    Task<JsonElement> RequestAsync(JobRequestRequest request, CancellationToken cancellationToken = default);
+    Task<GitLabJobRequestResponse> RequestAsync(JobRequestRequest request,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Updates a job's state (<c>PUT /jobs/:id</c>) - how a runner reports progress, completion or

@@ -33,7 +33,7 @@ namespace GitLab.Client.Abstractions;
 ///         text a caller supplies and is percent-encoded by this client - pass the raw value.
 ///     </para>
 /// </summary>
-public partial interface IPackagesConanClient
+public interface IPackagesConanClient
 {
     // ----- Recipes & packages (v1) -----
 
@@ -333,4 +333,30 @@ public partial interface IPackagesConanClient
     /// <summary>Verifies credentials against one project's Conan registry, through the Conan v2 protocol route.</summary>
     Task<GitLabFileResponse> CheckCredentialsForProjectV2Async(ProjectId projectId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads a file for a Conan recipe through the registry-scoped v1 route.</summary>
+    Task UploadRecipeFileAsync(string packageName, string packageVersion, string packageUsername,
+        string packageChannel, string recipeRevision, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads a file for a Conan package through the registry-scoped v1 route.</summary>
+    Task UploadPackageFileAsync(string packageName, string packageVersion, string packageUsername,
+        string packageChannel, string recipeRevision, string conanPackageReference, string packageRevision,
+        string fileName, GitLabFileUpload file, CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads a file for a Conan recipe in the specified project.</summary>
+    Task UploadRecipeFileForProjectAsync(ProjectId projectId, string packageName, string packageVersion,
+        string packageUsername, string packageChannel, string recipeRevision, string fileName,
+        GitLabFileUpload file, CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads a file for a Conan package in the specified project.</summary>
+    Task UploadPackageFileForProjectAsync(ProjectId projectId, string packageName, string packageVersion,
+        string packageUsername, string packageChannel, string recipeRevision, string conanPackageReference,
+        string packageRevision, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads a file for one pinned Conan recipe revision in the specified project.</summary>
+    Task UploadRecipeRevisionFileAsync(ProjectId projectId, string packageName, string packageVersion,
+        string packageUsername, string packageChannel, string recipeRevision, string fileName,
+        GitLabFileUpload file, CancellationToken cancellationToken = default);
 }

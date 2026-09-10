@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -8,6 +10,17 @@ public interface IProtectedTagsClient
 {
     /// <summary>Lists a project's protected tags and wildcard patterns.</summary>
     IAsyncEnumerable<GitLabProtectedTag> ListAsync(ProjectId projectId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Lists a project's protected tags and wildcard patterns, starting from the supplied offset page.
+    ///     The returned sequence follows GitLab's subsequent-page links automatically.
+    /// </summary>
+    /// <remarks>
+    ///     This overload deliberately keeps <paramref name="options" /> required: the original overload
+    ///     remains source-compatible for callers that passed a cancellation token positionally.
+    /// </remarks>
+    IAsyncEnumerable<GitLabProtectedTag> ListAsync(ProjectId projectId, ProtectedTagListOptions? options,
         CancellationToken cancellationToken = default);
 
     /// <summary>Retrieves one protected tag of a project by name or wildcard pattern.</summary>

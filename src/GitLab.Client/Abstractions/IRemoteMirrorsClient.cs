@@ -1,7 +1,7 @@
-using System.Text.Json;
-
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
 
 namespace GitLab.Client.Abstractions;
 
@@ -38,9 +38,9 @@ public interface IRemoteMirrorsClient
 
     /// <summary>
     ///     Retrieves the public key of a remote mirror that uses SSH authentication
-    ///     (<c>GET .../remote_mirrors/:mirror_id/public_key</c>). The spec declares no response schema for
-    ///     this route, so the answer is a raw <see cref="JsonElement" /> rather than an invented shape.
+    ///     (<c>GET .../remote_mirrors/:mirror_id/public_key</c>). The OpenAPI document omits this response
+    ///     schema, but GitLab's REST documentation specifies its <c>public_key</c> member.
     /// </summary>
-    Task<JsonElement> GetPublicKeyAsync(ProjectId projectId, long mirrorId,
+    Task<GitLabRemoteMirrorPublicKey> GetPublicKeyAsync(ProjectId projectId, long mirrorId,
         CancellationToken cancellationToken = default);
 }

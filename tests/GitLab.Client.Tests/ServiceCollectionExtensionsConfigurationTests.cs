@@ -1,5 +1,5 @@
 using GitLab.Client.Abstractions;
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Configuration;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

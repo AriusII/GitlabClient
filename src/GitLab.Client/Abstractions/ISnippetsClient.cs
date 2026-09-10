@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -101,6 +103,17 @@ public interface ISnippetsClient
     /// <summary>Streams every snippet on a project (<c>GET /projects/:id/snippets</c>).</summary>
     IAsyncEnumerable<GitLabSnippet> ListForProjectAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every snippet on a project while controlling the number of results fetched in each
+    ///     request (<c>GET /projects/:id/snippets?per_page=…</c>). The returned sequence still follows
+    ///     GitLab's pagination links to completion.
+    /// </summary>
+    /// <param name="projectId">The project's numeric id or namespaced path.</param>
+    /// <param name="options">The optional per-page payload-size setting declared by GitLab.</param>
+    /// <param name="cancellationToken">Cancels enumeration between pages.</param>
+    IAsyncEnumerable<GitLabSnippet> ListForProjectAsync(ProjectId projectId,
+        ProjectSnippetListOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>Gets one project snippet.</summary>
     Task<GitLabSnippet> GetForProjectAsync(ProjectId projectId, long snippetId,

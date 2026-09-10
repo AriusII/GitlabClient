@@ -1,0 +1,53 @@
+// Symbols banned in every production project that touches JSON. Wired up by the Contracts, Http and
+// façade project files as an <AdditionalFiles> item; tests are deliberately excluded because the
+// GitLabJsonContextRegistrationTests guard legitimately calls JsonSerializerContext.GetTypeInfo(Type).
+//
+// Every entry below resolves JSON metadata by System.Type at RUN TIME. They compile with zero
+// IL2xxx/IL3xxx under EnableTrimAnalyzer/EnableAotAnalyzer - those analyzers assume the
+// JsonSerializerContext supplies the metadata - yet they throw InvalidOperationException at run time
+// when the type was never registered with [JsonSerializable]. That is the one way a forgotten
+// registration can actually ship. Every call site in this library must instead pass a strongly typed
+// JsonTypeInfo<T> (GitLabJsonContext.Default.<Type>), which turns a forgotten registration into a
+// CS1061 compile error on the exact line.
+//
+// File format, verified against Microsoft.CodeAnalysis.BannedApiAnalyzers 5.6.0:
+//   - One documentation-comment ID per line, optionally followed by ';' and a message.
+//   - The comment marker is '//', NOT '#'. Blank lines are skipped, but a '#' line is parsed as a
+//     declaration ID: it resolves to nothing and is silently dropped, and two identical ones fail
+//     the build with RS0031 ("symbol '' is banned multiple times"). Do not use '#' here.
+//   - An entry that fails to resolve is silently ignored, degrading the guard to a no-op with no
+//     signal at all. Re-run the RS0030 probe described in CLAUDE.md after any major
+//     System.Text.Json version bump.
+//   - The file name must start with "BannedSymbols." and end with ".txt" or the analyzer ignores it.
+//
+// RS0030 is a warning by default and is only a build break here because src/Directory.Build.props
+// inherits TreatWarningsAsErrors=true from the repo root.
+
+// --- Banned: System.Text.Json Type-based (runtime-resolved) entry points ---
+M:System.Text.Json.JsonSerializer.Serialize(System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Serialize(System.IO.Stream,System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Serialize(System.Text.Json.Utf8JsonWriter,System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.SerializeAsync(System.IO.Stream,System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext,System.Threading.CancellationToken);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.SerializeAsync(System.IO.Pipelines.PipeWriter,System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext,System.Threading.CancellationToken);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.SerializeToDocument(System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.SerializeToElement(System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.SerializeToNode(System.Object,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.String,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.ReadOnlySpan{System.Char},System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.ReadOnlySpan{System.Byte},System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.IO.Stream,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.Text.Json.JsonDocument,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.Text.Json.JsonElement,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.Deserialize(System.Text.Json.Nodes.JsonNode,System.Type,System.Text.Json.Serialization.JsonSerializerContext);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.DeserializeAsync(System.IO.Stream,System.Type,System.Text.Json.Serialization.JsonSerializerContext,System.Threading.CancellationToken);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.JsonSerializer.DeserializeAsync(System.IO.Pipelines.PipeReader,System.Type,System.Text.Json.Serialization.JsonSerializerContext,System.Threading.CancellationToken);Pass a strongly typed GitLabJsonContext.Default.<Type> (JsonTypeInfo<T>) overload instead.
+M:System.Text.Json.Serialization.JsonSerializerContext.GetTypeInfo(System.Type);Use the generated GitLabJsonContext.Default.<Type> property so a missing [JsonSerializable] fails to compile.
+
+// --- Deliberately NOT banned ---
+// JsonSerializerOptions.GetTypeInfo(Type) and TryGetTypeInfo(Type, out ...) are the same
+// runtime-resolved hazard, but System.Text.Json's own source generator emits a call to
+// Options.GetTypeInfo(...) inside every GitLabJsonContext.<Type>.g.cs it produces, and RS0030 is
+// reported inside generated code too - banning them turns the build red with ~60 errors this
+// repo cannot fix. Verified against SDK 10.0.400.

@@ -2,6 +2,8 @@ using System.Text.Json;
 
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -44,6 +46,22 @@ public interface ISearchClient
     IAsyncEnumerable<GitLabUser> SearchUsersAsync(string search, SearchListOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Instance-wide group search (<c>GET /search?scope=groups</c>).</summary>
+    IAsyncEnumerable<GitLabGroup> SearchGroupsAsync(string search, SearchListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Instance-wide commit-message search (<c>GET /search?scope=commits</c>).</summary>
+    IAsyncEnumerable<GitLabCommit> SearchCommitsAsync(string search, SearchListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Instance-wide note (comment) search (<c>GET /search?scope=notes</c>).</summary>
+    IAsyncEnumerable<GitLabNote> SearchNotesAsync(string search, SearchListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Instance-wide milestone search (<c>GET /search?scope=milestones</c>).</summary>
+    IAsyncEnumerable<GitLabMilestone> SearchMilestonesAsync(string search, SearchListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Project search within one group (<c>GET /groups/:id/search?scope=projects</c>).</summary>
     IAsyncEnumerable<GitLabProject> SearchGroupProjectsAsync(GroupId groupId, string search,
         SearchListOptions? options = null, CancellationToken cancellationToken = default);
@@ -70,6 +88,10 @@ public interface ISearchClient
 
     /// <summary>User search within one group (<c>GET /groups/:id/search?scope=users</c>).</summary>
     IAsyncEnumerable<GitLabUser> SearchGroupUsersAsync(GroupId groupId, string search,
+        SearchListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Child-group search within one group (<c>GET /groups/:id/search?scope=groups</c>).</summary>
+    IAsyncEnumerable<GitLabGroup> SearchGroupGroupsAsync(GroupId groupId, string search,
         SearchListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>Issue search within one project (<c>GET /projects/:id/search?scope=issues</c>).</summary>

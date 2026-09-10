@@ -1,15 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using GitLab.Client.Infrastructure.Serialization;
 using GitLab.Client.Models;
+
+using GitLabJsonContext = GitLab.Client.Serialization.GitLabJsonContext;
 
 namespace GitLab.Client.Tests.Infrastructure;
 
 /// <summary>
 ///     Guards the one piece of per-resource wiring the <c>[GenerateClientLayers]</c> generator cannot
 ///     own. A Roslyn generator cannot contribute <c>[JsonSerializable]</c> attributes to
-///     <see cref="GitLabJsonContext" />: System.Text.Json's own generator runs against the original
+///     <see cref="Serialization.GitLabJsonContext" />: System.Text.Json's own generator runs against the original
 ///     compilation and never observes another generator's normal source output, and the attributes
 ///     cannot be spread across several partial declarations of the context either (that crashes the
 ///     STJ generator with CS8785). These tests are the substitute for that missing compile-time check.
@@ -28,6 +29,8 @@ namespace GitLab.Client.Tests.Infrastructure;
 /// </remarks>
 public sealed class GitLabJsonContextRegistrationTests
 {
+    private const string ModelsNamespacePrefix = "GitLab.Client.Models";
+
     /// <summary>
     ///     Suffix of the Models types that describe query strings rather than JSON bodies. They are
     ///     decomposed by <c>GitLabRouteBuilder.Query(...)</c> and must never carry JSON metadata.
@@ -104,7 +107,14 @@ public sealed class GitLabJsonContextRegistrationTests
     {
         return typeof(GitLabProject).Assembly
             .GetExportedTypes()
-            .Where(static type => type.Namespace == typeof(GitLabProject).Namespace)
+            // Requests and responses are intentionally split into child namespaces. Restricting this
+            // guard to exactly GitLab.Client.Models would let a newly added Models.Requests or
+            // Models.Responses DTO miss source-generated metadata until an endpoint happened to use it.
+            .Where(static type => type.Namespace is { } currentNamespace &&
+                                  (string.Equals(currentNamespace, ModelsNamespacePrefix,
+                                       StringComparison.Ordinal) ||
+                                   currentNamespace.StartsWith(ModelsNamespacePrefix + ".",
+                                       StringComparison.Ordinal)))
             .Where(static type => type is { IsClass: true, IsAbstract: false })
             .OrderBy(static type => type.Name, StringComparer.Ordinal)
             .ToList();

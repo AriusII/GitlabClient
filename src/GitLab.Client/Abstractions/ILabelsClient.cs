@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -46,22 +48,18 @@ public interface ILabelsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Deletes a project label. GitLab answers <c>200</c> echoing the deleted label; the body is not
-    ///     surfaced, because the label no longer exists to be acted on.
+    ///     Deletes a project label and returns the <c>200 OK</c> representation GitLab echoes before the
+    ///     label ceases to exist.
     /// </summary>
-    Task DeleteAsync(ProjectId projectId, string name, CancellationToken cancellationToken = default);
+    Task<GitLabLabel> DeleteAsync(ProjectId projectId, string name, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Promotes a project label to a group label, moving every issue and merge request assignment with
     ///     it. Irreversible, and it fails on a project that has no parent group.
-    ///     <para>
-    ///         GitLab answers with the resulting group label, but this returns <see cref="Task" />: the
-    ///         transport has no body-less <c>PUT</c> that also deserializes a response, and sending a body
-    ///         to an endpoint that declares none is worse than dropping it. Re-read it with
-    ///         <see cref="GetForGroupAsync" /> if you need the promoted label.
-    ///     </para>
+    ///     The returned group label keeps the project label's id.
     /// </summary>
-    Task PromoteAsync(ProjectId projectId, string name, CancellationToken cancellationToken = default);
+    Task<GitLabGroupLabel> PromoteAsync(ProjectId projectId, string name,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Streams every label of a group, following GitLab's <c>Link</c> pagination.</summary>
     IAsyncEnumerable<GitLabGroupLabel> ListForGroupAsync(GroupId groupId, GroupLabelListOptions? options = null,

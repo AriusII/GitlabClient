@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -17,6 +19,17 @@ public interface IProtectedBranchesClient
     /// <summary>Lists a project's protected branches and wildcard patterns.</summary>
     IAsyncEnumerable<GitLabProtectedBranch> ListAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Lists a project's protected branches using the supplied filter and offset-page settings. The
+    ///     returned sequence follows GitLab's subsequent-page links automatically.
+    /// </summary>
+    /// <remarks>
+    ///     <paramref name="options" /> is deliberately required to preserve source compatibility for
+    ///     callers that pass a cancellation token positionally to the original overload.
+    /// </remarks>
+    IAsyncEnumerable<GitLabProtectedBranch> ListAsync(ProjectId projectId,
+        ProjectProtectedBranchListOptions? options, CancellationToken cancellationToken = default);
 
     /// <summary>Retrieves one protected branch of a project by name or wildcard pattern.</summary>
     Task<GitLabProtectedBranch> GetAsync(ProjectId projectId, string name,

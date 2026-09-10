@@ -8,14 +8,14 @@ namespace GitLab.Client.Tests.DependencyInjection;
 
 /// <summary>
 ///     Covers everything <c>GitLabClientWiringGenerator</c> emits, through the real compiled assembly.
-///     These tests enumerate the resource client interfaces rather than listing them, so every resource
-///     added from here on is covered the moment its <c>I&lt;Resource&gt;Client</c> lands - which is
-///     exactly the "you forgot to wire something" regression the generator exists to prevent.
+///     These tests enumerate public resource-client interfaces rather than listing them. They derive
+///     the direct composition-root clients by excluding interfaces owned by another client facade, so
+///     every new root resource is covered without flattening intentional nested APIs.
 ///     <para>Reflection is fine here: the test assembly is neither trimmed nor AOT-published.</para>
 /// </summary>
 public sealed class GeneratedWiringTests
 {
-    private static readonly Type[] ResourceClientInterfaces = typeof(IGitLabClient).Assembly
+    private static readonly Type[] PublicClientInterfaces = typeof(IGitLabClient).Assembly
         .GetExportedTypes()
         .Where(type => type.IsInterface
                        && string.Equals(type.Namespace, "GitLab.Client.Abstractions", StringComparison.Ordinal)
@@ -24,27 +24,56 @@ public sealed class GeneratedWiringTests
         .OrderBy(type => type.Name, StringComparer.Ordinal)
         .ToArray();
 
+    // A client exposed from another client is intentionally a nested facade, not an additional
+    // top-level IGitLabClient property. For example, GraphQL owns WorkItems so callers retain a
+    // clear API boundary: gitLab.GraphQL.WorkItems rather than gitLab.WorkItems.
+    private static readonly Type[] NestedClientInterfaces = PublicClientInterfaces
+        .Where(candidate => PublicClientInterfaces
+            .Where(parent => parent != candidate)
+            .SelectMany(parent => parent.GetProperties())
+            .Any(property => property.PropertyType == candidate))
+        .OrderBy(type => type.Name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static readonly Type[] RootClientInterfaces = PublicClientInterfaces
+        .Except(NestedClientInterfaces)
+        .OrderBy(type => type.Name, StringComparer.Ordinal)
+        .ToArray();
+
     [Fact]
-    public void AddGitLabClient_RegistersEveryResourceClientInterface()
+    public void AddGitLabClient_RegistersEveryRootResourceClientInterface()
     {
         using ServiceProvider provider = BuildProvider(out _);
 
-        Assert.NotEmpty(ResourceClientInterfaces);
+        Assert.NotEmpty(RootClientInterfaces);
 
-        foreach (Type clientInterface in ResourceClientInterfaces)
+        foreach (Type clientInterface in RootClientInterfaces)
         {
             Assert.NotNull(provider.GetService(clientInterface));
         }
     }
 
     [Fact]
-    public void IGitLabClient_ExposesEveryResourceClientInterface()
+    public void IGitLabClient_ExposesExactlyEveryRootResourceClientInterface()
     {
         HashSet<Type> exposed = typeof(IGitLabClient).GetProperties()
             .Select(property => property.PropertyType)
             .ToHashSet();
 
-        Assert.Equal(ResourceClientInterfaces.ToHashSet(), exposed);
+        Assert.Equal(RootClientInterfaces.ToHashSet(), exposed);
+    }
+
+    [Fact]
+    public void IGraphQLClient_ExposesWorkItemsAsItsNestedResourceClient()
+    {
+        using ServiceProvider provider = BuildProvider(out _);
+
+        IGraphQLClient graphQL = provider.GetRequiredService<IGraphQLClient>();
+        IGraphQLWorkItemsClient workItems = provider.GetRequiredService<IGraphQLWorkItemsClient>();
+
+        Assert.Contains(typeof(IGraphQLWorkItemsClient), NestedClientInterfaces);
+        Assert.DoesNotContain(typeof(IGraphQLWorkItemsClient), RootClientInterfaces);
+        Assert.Same(workItems, graphQL.WorkItems);
     }
 
     [Fact]
@@ -60,11 +89,11 @@ public sealed class GeneratedWiringTests
     }
 
     [Fact]
-    public void ResourceClients_AreRegisteredAsSingletons()
+    public void RootResourceClients_AreRegisteredAsSingletons()
     {
         using ServiceProvider provider = BuildProvider(out ServiceCollection services);
 
-        foreach (Type clientInterface in ResourceClientInterfaces)
+        foreach (Type clientInterface in RootClientInterfaces)
         {
             ServiceDescriptor descriptor =
                 Assert.Single(services, candidate => candidate.ServiceType == clientInterface);
@@ -87,33 +116,9 @@ public sealed class GeneratedWiringTests
 
         Assert.Contains("already been called", exception.Message, StringComparison.Ordinal);
 
-        foreach (Type clientInterface in ResourceClientInterfaces)
+        foreach (Type clientInterface in RootClientInterfaces)
         {
             Assert.Single(services, candidate => candidate.ServiceType == clientInterface);
-        }
-    }
-
-    /// <summary>
-    ///     The generated registrations wire the whole Repository -&gt; Service -&gt; Controller chain, so
-    ///     the internal layers must resolve too, not just the public client interface.
-    /// </summary>
-    [Fact]
-    public void AddGitLabClient_RegistersTheWholeLayerChainForEveryResource()
-    {
-        using ServiceProvider provider = BuildProvider(out _);
-        Assembly assembly = typeof(IGitLabClient).Assembly;
-
-        foreach (Type clientInterface in ResourceClientInterfaces)
-        {
-            string resource = clientInterface.Name[1..^"Client".Length];
-
-            Type? repositoryInterface = assembly.GetType($"GitLab.Client.Repositories.I{resource}Repository", false);
-            Type? serviceInterface = assembly.GetType($"GitLab.Client.Services.I{resource}Service", false);
-
-            Assert.NotNull(repositoryInterface);
-            Assert.NotNull(serviceInterface);
-            Assert.NotNull(provider.GetService(repositoryInterface));
-            Assert.NotNull(provider.GetService(serviceInterface));
         }
     }
 

@@ -1,8 +1,9 @@
 using System.Net;
 
+using GitLab.Client;
 using GitLab.Client.Abstractions;
-using GitLab.Client.Controllers;
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Configuration;
+using GitLab.Client.Infrastructure.GraphQL;
 using GitLab.Client.Infrastructure.Http;
 using GitLab.Client.Infrastructure.RateLimiting;
 
@@ -16,7 +17,7 @@ using Microsoft.Extensions.Options;
 // warnings-as-errors build.
 namespace Microsoft.Extensions.DependencyInjection;
 
-/// <summary>Registers the GitLab REST API client and everything it needs on an <see cref="IServiceCollection" />.</summary>
+/// <summary>Registers the GitLab REST v4 and GraphQL client façade on an <see cref="IServiceCollection" />.</summary>
 public static partial class GitLabClientServiceCollectionExtensions
 {
     /// <summary>
@@ -111,11 +112,10 @@ public static partial class GitLabClientServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor
             .Singleton<IValidateOptions<GitLabClientOptions>, GitLabClientOptionsValidator>());
 
-        // One tracker instance, two views onto it: consumers only read, the pipeline only writes.
+        // One tracker instance with a public read-only view. The internal handler depends on the concrete
+        // type; a write-capable interface would add an abstraction with one implementation and no caller.
         services.TryAddSingleton<GitLabRateLimitTracker>();
         services.TryAddSingleton<IGitLabRateLimitTracker>(static provider =>
-            provider.GetRequiredService<GitLabRateLimitTracker>());
-        services.TryAddSingleton<IGitLabRateLimitWriter>(static provider =>
             provider.GetRequiredService<GitLabRateLimitTracker>());
 
         services.TryAddTransient<GitLabRetryHandler>();
@@ -123,8 +123,16 @@ public static partial class GitLabClientServiceCollectionExtensions
         services.TryAddTransient<GitLabRateLimitHandler>();
 
         services.TryAddSingleton<IGitLabApiConnection, GitLabApiConnection>();
+        // GraphQL shares the authenticated named HTTP client and the REST transport's source-generated
+        // serialization path. Keep this adapter singleton with the REST connection; it carries no
+        // operation state and resolves the configured endpoint for every call.
+        services.TryAddSingleton<IGitLabGraphQLConnection, GitLabGraphQLConnection>();
 
         AddResourceClients(services);
+        // The Work Items facade is a view over GraphQLClient, not a second endpoint or transport. Registering
+        // it as an alias preserves direct injection while guaranteeing both access paths observe one singleton.
+        services.TryAddSingleton<IGraphQLWorkItemsClient>(static provider =>
+            provider.GetRequiredService<IGraphQLClient>().WorkItems);
 
         services.TryAddSingleton<IGitLabClient, GitLabClient>();
 
@@ -156,6 +164,10 @@ public static partial class GitLabClientServiceCollectionExtensions
                 // JSON and compress roughly 5-10x: this is the largest measurable win in the transport layer
                 // and it costs one line.
                 handler.AutomaticDecompression = DecompressionMethods.All;
+                // Handler instances are pooled by IHttpClientFactory. Cookies are ambient mutable state and
+                // would otherwise leak across logical clients that share the pool; GitLab authentication is
+                // explicitly header-based, so this client never needs a cookie container.
+                handler.UseCookies = false;
 
                 // Redirects are followed by the PRIMARY handler, below every DelegatingHandler, so
                 // GitLabAuthenticationHandler never sees the redirected request and cannot withhold the
@@ -192,9 +204,8 @@ public static partial class GitLabClientServiceCollectionExtensions
     }
 
     /// <summary>
-    ///     Registers the Repository -&gt; Service -&gt; Controller triple for every resource whose Repository
-    ///     interface carries <c>[GenerateClientLayers]</c>. Implemented by <c>GitLabClientWiringGenerator</c>
-    ///     as explicit <c>TryAddSingleton</c> calls with both type arguments closed at compile time; see
+    ///     Registers each direct endpoint client. Implemented by <c>GitLabClientWiringGenerator</c> as
+    ///     explicit <c>TryAddSingleton</c> calls with both type arguments closed at compile time; see
     ///     <c>obj/Generated</c> for the emitted body.
     ///     <para>
     ///         The <c>private</c> modifier is load-bearing. An extended partial method that carries an

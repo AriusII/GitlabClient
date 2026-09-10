@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -20,7 +22,7 @@ namespace GitLab.Client.Abstractions;
 ///         every implementation percent-encodes each one as its own path segment.
 ///     </para>
 /// </summary>
-public partial interface IPackagesDebianClient
+public interface IPackagesDebianClient
 {
     // ---- Distributions (project scope) ----
 
@@ -183,4 +185,8 @@ public partial interface IPackagesDebianClient
     /// </summary>
     Task AuthorizePackageUploadAsync(ProjectId projectId, string fileName,
         AuthorizeDebianPackageUploadRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads a Debian package file after the corresponding Workhorse authorization check.</summary>
+    Task UploadPackageFileAsync(ProjectId projectId, string fileName, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
 }

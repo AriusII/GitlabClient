@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -46,7 +47,10 @@ public interface IContainerRegistryClient
     ///     Deletes every tag on a repository matching the given filters
     ///     (<c>DELETE /projects/:id/registry/repositories/:repository_id/tags</c>) - the bulk cleanup
     ///     operation behind GitLab's container registry cleanup policies. GitLab performs the actual
-    ///     removal asynchronously; the call itself only schedules it.
+    ///     removal asynchronously; the call itself only schedules it. A deletion matcher
+    ///     (<see cref="DeleteRegistryRepositoryTagsOptions.NameRegexDelete" /> or its legacy
+    ///     <see cref="DeleteRegistryRepositoryTagsOptions.NameRegex" /> alias) must be supplied; the client
+    ///     rejects a null or empty matcher before it issues the potentially destructive request.
     /// </summary>
     Task DeleteTagsAsync(ProjectId projectId, long repositoryId, DeleteRegistryRepositoryTagsOptions? options = null,
         CancellationToken cancellationToken = default);

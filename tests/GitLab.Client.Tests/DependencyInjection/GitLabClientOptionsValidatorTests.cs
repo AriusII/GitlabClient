@@ -1,4 +1,4 @@
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Configuration;
 
 using Microsoft.Extensions.Options;
 
@@ -50,12 +50,27 @@ public sealed class GitLabClientOptionsValidatorTests
     [InlineData("https://gitlab.example/api/v4")]
     [InlineData("ftp://gitlab.example/api/v4/")]
     [InlineData("file:///c:/gitlab/")]
+    [InlineData("https://token@gitlab.example/api/v4/")]
+    [InlineData("https://gitlab.example/api/v4/?private_token=secret")]
+    [InlineData("https://gitlab.example/api/v4/#fragment")]
     public void Validate_RejectsABaseAddressThatIsNotAnHttpRootEndingInASlash(string baseAddress)
     {
         GitLabClientOptions options = ValidOptions;
         options.BaseAddress = new Uri(baseAddress);
 
         AssertFailsWith(options, nameof(GitLabClientOptions.BaseAddress));
+    }
+
+    [Fact]
+    public void Validate_RequiresAnExplicitOptInForPlaintextHttp()
+    {
+        GitLabClientOptions options = ValidOptions;
+        options.BaseAddress = new Uri("http://gitlab.example/api/v4/");
+
+        AssertFailsWith(options, nameof(GitLabClientOptions.BaseAddress));
+
+        options.AllowInsecureHttp = true;
+        Assert.True(Validate(options).Succeeded);
     }
 
     [Fact]

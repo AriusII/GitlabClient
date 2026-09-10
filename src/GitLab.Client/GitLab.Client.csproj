@@ -1,13 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- The façade is the sole distributable NuGet package. -->
+    <IsPackable>true</IsPackable>
     <AssemblyName>GitLab.Client</AssemblyName>
     <RootNamespace>GitLab.Client</RootNamespace>
     <PackageId>GitLab.Client</PackageId>
-    <Version>1.0.0</Version>
-    <Description>A fully-typed, dependency-injection-first C# client for the GitLab REST API (v4), targeting GitLab 19.x and above. Native AOT and trimming friendly.</Description>
-    <PackageTags>gitlab;gitlab-api;rest;http-client;aot;native-aot</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Contracts live in companion assemblies inside this package; retain the 2.0 boundary for
+         consumers which compiled against the former monolithic assembly. -->
+    <Version>2.0.0</Version>
+    <Description>A fully typed, dependency-injection-first C# client for the GitLab REST API v4 and GraphQL API, targeting GitLab 19.x and above. Native AOT and trimming friendly.</Description>
+    <PackageTags>gitlab;gitlab-api;rest;graphql;work-items;http-client;aot;native-aot</PackageTags>
+    <PackageReadmeFile>README.NuGet.md</PackageReadmeFile>
     <!-- Makes OptionsBuilder<GitLabClientOptions>.Bind(IConfiguration) interceptable by the
          Configuration Binder source generator instead of falling back to reflection - see
          AddGitLabClient(IServiceCollection, IConfiguration, string) in
@@ -20,7 +24,6 @@
     <PackageReference Include="Microsoft.Extensions.Http"/>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
     <PackageReference Include="Microsoft.Extensions.Options"/>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
     <!-- IConfiguration for the appsettings-driven AddGitLabClient overload, and the
          OptionsBuilder<GitLabClientOptions>.Bind(IConfiguration) extension it uses. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions"/>
@@ -28,13 +31,12 @@
   </ItemGroup>
 
   <!--
-    Bans the Type-based, runtime-resolved System.Text.Json entry points; see BannedSymbols.txt.
-    Deliberately scoped to this project rather than promoted to a repo-level Directory.Build.props:
-    the GitLabJsonContextRegistrationTests guard legitimately calls GetTypeInfo(Type).
+    Bans the Type-based, runtime-resolved System.Text.Json entry points in the façade; the same guard is
+    applied by Contracts and Http, where the JSON context and transport live after the project split.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all"/>
-    <AdditionalFiles Include="BannedSymbols.txt"/>
+    <AdditionalFiles Include="..\BannedSymbols.txt"/>
   </ItemGroup>
 
   <!--
@@ -64,18 +66,68 @@
     <NoWarn>$(NoWarn);RS0026;RS0027</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Moving public types into companion assemblies is an intentional 2.0 binary break; do not
+         validate their former assembly home in the façade baseline. -->
+    <NoWarn>$(NoWarn);RS0017</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="GitLab.Client.Tests"/>
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      These projects remain compile-time references, while their outputs are embedded alongside
+      the façade below. PrivateAssets prevents NuGet from emitting nonexistent GitLab.Client.*
+      package dependencies in GitLab.Client.nuspec.
+    -->
+    <ProjectReference Include="..\GitLab.Client.Contracts\GitLab.Client.Contracts.csproj" PrivateAssets="all"/>
+    <ProjectReference Include="..\GitLab.Client.Routing\GitLab.Client.Routing.csproj" PrivateAssets="all"/>
+    <ProjectReference Include="..\GitLab.Client.Http\GitLab.Client.Http.csproj" PrivateAssets="all"/>
     <ProjectReference Include="..\..\generators\GitLab.Client.SourceGenerators\GitLab.Client.SourceGenerators.csproj"
                       OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false"/>
+                      ReferenceOutputAssembly="false"
+                      GlobalPropertiesToRemove="PublishAot"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="/"/>
+    <None Include="..\..\README.NuGet.md" Pack="true" PackagePath="/"/>
   </ItemGroup>
+
+  <!--
+    NuGet's default project-reference behaviour is to create a package dependency. For the three
+    internal modules that would require publishing three additional packages. Package the copies
+    produced in the façade's resolved output directory instead, placing their runtime assemblies
+    and XML documentation in this package's lib/net10.0 group. This follows a custom output root
+    without hard-coding a bin path and also works when packing after a normal build with `NoBuild=true`.
+  -->
+  <PropertyGroup>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeGitLabClientModuleAssemblies</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <Target Name="IncludeGitLabClientModuleAssemblies">
+    <ItemGroup>
+      <BuildOutputInPackage Include="$(TargetDir)GitLab.Client.Contracts.dll;$(TargetDir)GitLab.Client.Contracts.xml"/>
+      <BuildOutputInPackage Include="$(TargetDir)GitLab.Client.Routing.dll;$(TargetDir)GitLab.Client.Routing.xml"/>
+      <BuildOutputInPackage Include="$(TargetDir)GitLab.Client.Http.dll;$(TargetDir)GitLab.Client.Http.xml"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Publish CI intentionally reads the literal Version above before invoking dotnet pack. Keep that
+    release-facing value, but fail packing if it diverges from the shared source-assembly version
+    declared in src/Directory.Build.props. This prevents one nupkg from carrying module DLLs with
+    mismatched assembly metadata while preserving the existing release gate.
+  -->
+  <Target Name="ValidateGitLabClientDistributionVersion" BeforeTargets="Pack">
+    <PropertyGroup>
+      <_GitLabClientEffectivePackageVersion Condition="'$(PackageVersion)' == ''">$(Version)</_GitLabClientEffectivePackageVersion>
+      <_GitLabClientEffectivePackageVersion Condition="'$(PackageVersion)' != ''">$(PackageVersion)</_GitLabClientEffectivePackageVersion>
+    </PropertyGroup>
+
+    <Error Condition="'$(_GitLabClientEffectivePackageVersion)' != '$(GitLabClientDistributionVersion)'"
+           Text="GitLab.Client package version '$(_GitLabClientEffectivePackageVersion)' must match GitLabClientDistributionVersion '$(GitLabClientDistributionVersion)' in src/Directory.Build.props so all packaged assemblies share one version."/>
+  </Target>
 
 </Project>

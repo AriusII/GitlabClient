@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Configuration;
 using GitLab.Client.Tests.TestSupport;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -152,10 +152,10 @@ public sealed class GitLabRetryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task SendAsync_RetriesRequestsWithJsonContent_ReplayingTheSameBody()
+    public async Task SendAsync_DoesNotRetryMutatingRequestsEvenWhenTheirContentIsReplayable()
     {
-        // JsonContent (and ByteArrayContent/StringContent generally) re-serialize from an in-memory buffer
-        // on every read, so the same instance is safe to attach to every retry attempt.
+        // Replayable bytes are not enough to make a POST safe: the connection can fail after GitLab has
+        // created the resource, so an automatic second send could duplicate a visible mutation.
         using RecordingHttpMessageHandler handler = new(static (_, requestIndex) =>
             requestIndex == 0 ? TransientFailure(HttpStatusCode.ServiceUnavailable) : Ok());
         using HttpClient client = CreateClient(handler);
@@ -164,10 +164,8 @@ public sealed class GitLabRetryHandlerTests : IDisposable
         using HttpResponseMessage response = await client.PostAsync(
             new Uri("projects/1/hooks", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, handler.Requests.Count);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("{\"name\":\"hook\"}", await handler.Requests[1].Content!.ReadAsStringAsync(
-            TestContext.Current.CancellationToken));
+        Assert.Single(handler.Requests);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
     [Fact]

@@ -1,3 +1,6 @@
+using System.Reflection;
+using System.Text;
+
 using GitLab.Client.Domain;
 using GitLab.Client.Infrastructure.Routing;
 
@@ -11,6 +14,9 @@ namespace GitLab.Client.Tests.Infrastructure;
 public sealed class GitLabRouteBuilderTests
 {
     private static readonly Uri BaseAddress = new("https://gitlab.example/api/v4/");
+
+    private static readonly FieldInfo CachedPathField = typeof(GitLabRouteBuilder).GetField(
+        "t_cachedPath", BindingFlags.Static | BindingFlags.NonPublic)!;
 
     private static readonly string[] LabelsWithSpaceAndComma = ["bug", "needs review", "a,b"];
 
@@ -231,6 +237,31 @@ public sealed class GitLabRouteBuilderTests
 
         Assert.Equal("groups/2/subgroups", inner.OriginalString);
         Assert.Equal("projects/1/repository/commits", outerRoute.OriginalString);
+    }
+
+    [Fact]
+    public void FaultedBuilder_AbandonsItsThreadLocalLease_AndTheNextBuildRestoresCacheReuse()
+    {
+        // First establish a cached buffer, then check it out through a builder that fails before Build().
+        // The old boolean lease would remain set after Escaped throws, forcing every later builder on this
+        // worker thread down a permanent allocation-only fallback path.
+        _ = GitLabRouteBuilder.Create("seed").Build();
+        StringBuilder initialCachedPath = Assert.IsType<StringBuilder>(CachedPathField.GetValue(null));
+
+        GitLabRouteBuilder faulted = GitLabRouteBuilder.Create("projects");
+        Assert.Null(CachedPathField.GetValue(null));
+
+        Assert.Throws<ArgumentException>(() => faulted.Escaped(""));
+        Assert.Null(CachedPathField.GetValue(null));
+
+        Uri recoveredRoute = GitLabRouteBuilder.Create("groups").Segment(2).Build();
+        Assert.Equal("groups/2", recoveredRoute.OriginalString);
+
+        StringBuilder recoveredCachedPath = Assert.IsType<StringBuilder>(CachedPathField.GetValue(null));
+        Assert.NotSame(initialCachedPath, recoveredCachedPath);
+
+        _ = GitLabRouteBuilder.Create("users").Build();
+        Assert.Same(recoveredCachedPath, CachedPathField.GetValue(null));
     }
 
     [Fact]

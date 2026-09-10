@@ -17,6 +17,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GitLab.Client\GitLab.Client.csproj"/>
+    <!--
+      The façade is the only NuGet package, which exposes the Contracts and Http assemblies as
+      sibling compile assets. ProjectReference does not model those packed sibling assets when
+      the façade keeps its implementation references private, so the source sample references
+      the two assemblies whose public types it consumes directly.
+    -->
+    <ProjectReference Include="..\..\src\GitLab.Client.Contracts\GitLab.Client.Contracts.csproj"/>
+    <ProjectReference Include="..\..\src\GitLab.Client.Http\GitLab.Client.Http.csproj"/>
   </ItemGroup>
 
   <ItemGroup>

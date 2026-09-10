@@ -16363,7 +16363,7 @@ GitLab.Client.Models.UpdateBroadcastMessageRequest.Theme.init -> void
 GitLab.Client.Models.UpdateBroadcastMessageRequest.UpdateBroadcastMessageRequest() -> void
 GitLab.Client.Models.UpdateCompliancePolicySettingsRequest
 GitLab.Client.Models.UpdateCompliancePolicySettingsRequest.<Clone>$() -> GitLab.Client.Models.UpdateCompliancePolicySettingsRequest!
-GitLab.Client.Models.UpdateCompliancePolicySettingsRequest.CspNamespaceId.get -> long
+GitLab.Client.Models.UpdateCompliancePolicySettingsRequest.CspNamespaceId.get -> long?
 GitLab.Client.Models.UpdateCompliancePolicySettingsRequest.CspNamespaceId.init -> void
 GitLab.Client.Models.UpdateCompliancePolicySettingsRequest.Equals(GitLab.Client.Models.UpdateCompliancePolicySettingsRequest? other) -> bool
 GitLab.Client.Models.UpdateCompliancePolicySettingsRequest.UpdateCompliancePolicySettingsRequest() -> void

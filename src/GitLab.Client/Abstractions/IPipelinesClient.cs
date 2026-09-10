@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -67,11 +69,20 @@ public interface IPipelinesClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Lists the pipeline's jobs with its pipeline-specific filters, including retried attempts when
+    ///     requested (<c>GET /projects/:id/pipelines/:pipeline_id/jobs</c>). This complements
+    ///     <see cref="IJobsClient.ListForPipelineAsync" /> when the caller needs <c>include_retried</c> or
+    ///     <c>scope[]</c>.
+    /// </summary>
+    IAsyncEnumerable<GitLabJob> ListJobsAsync(ProjectId projectId, long pipelineId,
+        PipelineJobListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Lists the pipeline's trigger (bridge) jobs - the jobs that start a downstream pipeline - streaming
-    ///     every page. Each carries <see cref="GitLabJob.DownstreamPipeline" />. This is the endpoint that
+    ///     every page. Each carries <see cref="GitLabBridge.DownstreamPipeline" />. This is the endpoint that
     ///     supersedes the deprecated <c>bridges</c> one.
     /// </summary>
-    IAsyncEnumerable<GitLabJob> ListTriggerJobsAsync(ProjectId projectId, long pipelineId,
+    IAsyncEnumerable<GitLabBridge> ListTriggerJobsAsync(ProjectId projectId, long pipelineId,
         TriggerJobListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>

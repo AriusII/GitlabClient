@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -52,7 +53,10 @@ public interface IWikisClient
     ///     without creating or editing a page - paste the returned markdown into a page body to embed it.
     /// </summary>
     /// <param name="projectId">The project's numeric id or its namespaced path.</param>
-    /// <param name="file">The file part. Its stream is read but never disposed, so the caller keeps ownership of it.</param>
+    /// <param name="file">
+    ///     The file part. Its stream is read but never disposed, so the caller keeps ownership of it. GitLab
+    ///     requires the multipart field name <c>file</c>; any supplied <see cref="GitLabFileUpload.FieldName" /> is ignored.
+    /// </param>
     /// <param name="branch">The wiki branch to commit the attachment to. Defaults to the wiki's default branch.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
     Task<GitLabWikiAttachment> UploadAttachmentForProjectAsync(ProjectId projectId, GitLabFileUpload file,
@@ -82,7 +86,10 @@ public interface IWikisClient
     ///     Requires GitLab Premium.
     /// </summary>
     /// <param name="groupId">The group's numeric id or its namespaced path.</param>
-    /// <param name="file">The file part. Its stream is read but never disposed, so the caller keeps ownership of it.</param>
+    /// <param name="file">
+    ///     The file part. Its stream is read but never disposed, so the caller keeps ownership of it. GitLab
+    ///     requires the multipart field name <c>file</c>; any supplied <see cref="GitLabFileUpload.FieldName" /> is ignored.
+    /// </param>
     /// <param name="branch">The wiki branch to commit the attachment to. Defaults to the wiki's default branch.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
     Task<GitLabWikiAttachment> UploadAttachmentForGroupAsync(GroupId groupId, GitLabFileUpload file,

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>GitLab.Client.Routing</AssemblyName>
+    <RootNamespace>GitLab.Client</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GitLab.Client.Contracts\GitLab.Client.Contracts.csproj"/>
+    <ProjectReference Include="..\..\generators\GitLab.Client.SourceGenerators\GitLab.Client.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      GlobalPropertiesToRemove="PublishAot"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GitLab.Client"/>
+    <InternalsVisibleTo Include="GitLab.Client.Tests"/>
+  </ItemGroup>
+
+</Project>

@@ -1,7 +1,7 @@
 using System.Net;
 
 using GitLab.Client.Abstractions;
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Configuration;
 using GitLab.Client.Infrastructure.Http;
 using GitLab.Client.Infrastructure.RateLimiting;
 
@@ -140,7 +140,7 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddGitLabClient_EnablesResponseCompressionAndRefusesRedirects()
+    public void AddGitLabClient_EnablesResponseCompressionAndDisablesRedirectsAndCookies()
     {
         ServiceCollection services = new();
         services.AddGitLabClient(options => options.AccessToken = TestToken);
@@ -154,6 +154,7 @@ public sealed class ServiceCollectionExtensionsTests
         // Redirects are followed below every DelegatingHandler, so the authentication handler cannot withhold
         // PRIVATE-TOKEN from a cross-host 3xx target. Not following them at all is the fix.
         Assert.False(primaryHandler.AllowAutoRedirect);
+        Assert.False(primaryHandler.UseCookies);
     }
 
     [Fact]
@@ -190,11 +191,11 @@ public sealed class ServiceCollectionExtensionsTests
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
-        // The consumer-facing reader and the pipeline-facing writer must be the same instance, or the
+        // The consumer-facing reader and the pipeline-owned tracker must be the same instance, or the
         // tracker would report state nobody ever wrote to it.
         Assert.Same(
             provider.GetRequiredService<IGitLabRateLimitTracker>(),
-            provider.GetRequiredService<IGitLabRateLimitWriter>());
+            provider.GetRequiredService<GitLabRateLimitTracker>());
     }
 
     private static HttpMessageHandler GetPrimaryHandler(IServiceProvider provider)

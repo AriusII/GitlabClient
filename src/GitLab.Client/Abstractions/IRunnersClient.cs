@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -115,4 +117,61 @@ public interface IRunnersClient
     ///     it until they are reconfigured. The new token is returned exactly once.
     /// </summary>
     Task<GitLabRunnerToken> ResetAuthenticationTokenAsync(long runnerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Registers a runner process through the legacy runner protocol (<c>POST /runners</c>) and returns
+    ///     its newly issued authentication token. For creating a runner owned by the current GitLab user,
+    ///     prefer <see cref="ICurrentUserClient.CreateRunnerAsync" />.
+    /// </summary>
+    /// <param name="request">The registration token and the runner process's initial configuration.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The registered runner's id and write-once authentication token.</returns>
+    Task<GitLabRunnerRegistration> RegisterAsync(RegisterRunnerRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Revokes a runner registration using the runner's own authentication token
+    ///     (<c>DELETE /runners?token=…</c>). This is the runner-protocol counterpart to
+    ///     <see cref="DeleteAsync" />, which removes a runner by its administrative id.
+    /// </summary>
+    /// <param name="token">The runner authentication token to revoke.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task UnregisterAsync(string token, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Deletes one manager registration from a runner using its authentication token and system id
+    ///     (<c>DELETE /runners/managers</c>). It does not delete the runner itself.
+    /// </summary>
+    /// <param name="token">The runner authentication token.</param>
+    /// <param name="systemId">The runner manager's system identifier.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task RemoveManagerAsync(string token, string systemId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Verifies a runner authentication token. GitLab returns the runner id and the same registration
+    ///     details when the credential remains valid; a 403 or 422 means that the credential cannot be used.
+    /// </summary>
+    /// <param name="request">The runner token and, optionally, its manager system id.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<GitLabRunnerRegistration> VerifyAsync(VerifyRunnerRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Rotates the authentication token that is supplied in the request body. This is intended for a
+    ///     runner rotating its own credential; use <see cref="ResetAuthenticationTokenAsync(long, CancellationToken)" />
+    ///     when an administrator is rotating another runner's token by id.
+    /// </summary>
+    /// <param name="request">The runner's current authentication token.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The new write-once authentication token.</returns>
+    Task<GitLabRunnerToken> ResetAuthenticationTokenAsync(ResetRunnerAuthenticationTokenRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Discovers the secure Job Router endpoint available to the authenticated runner
+    ///     (<c>GET /runners/router/discovery</c>). The returned WebSocket URI is optional because an instance
+    ///     can have the Job Router disabled.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<GitLabRunnerRouterDiscovery> DiscoverJobRouterAsync(CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,9 @@
+using System.Collections.Immutable;
+using System.Globalization;
 using System.Text;
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -176,9 +179,8 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
     {
         context.RegisterPostInitializationOutput(static ctx =>
         {
-            // Safe to call from this second generator as well: Roslyn emits EmbeddedAttribute as an
-            // "internal sealed PARTIAL class", so the copy added here merges with the one
-            // GenerateClientLayersGenerator adds instead of colliding (CS0101).
+            // The query attributes are emitted into each consuming compilation. They are internal and
+            // therefore never become part of the package surface.
             ctx.AddEmbeddedAttributeDefinition();
             ctx.AddSource("GitLabQueryAttributes.g.cs", SourceText.From(AttributeSource, Encoding.UTF8));
         });
@@ -186,12 +188,31 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         // The options types are records, so the syntactic filter has to be TypeDeclarationSyntax:
         // RecordDeclarationSyntax does NOT derive from ClassDeclarationSyntax.
         IncrementalValuesProvider<OptionsModel?> optionsTypes = context.SyntaxProvider.ForAttributeWithMetadataName(
-            QueryAttributeFullName,
-            static (node, _) => node is TypeDeclarationSyntax,
-            static (ctx, _) => TryCreateOptionsModel(ctx));
+                QueryAttributeFullName,
+                static (node, _) => node is TypeDeclarationSyntax,
+                static (ctx, _) => TryCreateOptionsModel(ctx))
+            .WithTrackingName("GitLabQuery.OptionsModel");
 
-        context.RegisterSourceOutput(optionsTypes, static (spc, model) =>
+        IncrementalValueProvider<ImmutableArray<OptionsModel?>> allOptions = optionsTypes.Collect();
+        IncrementalValuesProvider<OptionsSourceInput> optionsForSourceOutput = optionsTypes.Combine(allOptions)
+            .Select(static (source, _) =>
+            {
+                OptionsModel? model = source.Left;
+                return model is null
+                    ? default
+                    : new OptionsSourceInput(model, GetOptionsGeneratedName(model, source.Right));
+            })
+            // Collecting the options is necessary to resolve the rare same-short-name collision, but a
+            // new, unrelated [GitLabQuery] type must not make every existing generated source look
+            // changed. Project the collected set down to the only value that affects this output before
+            // the tracked boundary: the option model and its resolved hint/declaration name. The record
+            // uses OptionsModel's structural equality, so the source output remains unchanged unless
+            // either this model or its own collision group changes.
+            .WithTrackingName("GitLabQuery.OptionsSourceInput");
+
+        context.RegisterSourceOutput(optionsForSourceOutput, static (spc, source) =>
         {
+            OptionsModel? model = source.Model;
             if (model is null)
             {
                 return;
@@ -202,14 +223,15 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
                 spc.ReportDiagnostic(diagnostic);
             }
 
-            spc.AddSource($"{model.TypeName}QueryExtensions.g.cs",
-                SourceText.From(RenderOptions(model), Encoding.UTF8));
+            string generatedName = source.GeneratedName!;
+            spc.AddSource($"{generatedName}.g.cs", SourceText.From(RenderOptions(model, generatedName), Encoding.UTF8));
         });
 
         IncrementalValuesProvider<EnumModel?> enums = context.SyntaxProvider.ForAttributeWithMetadataName(
-            JsonConverterAttributeFullName,
-            static (node, _) => node is EnumDeclarationSyntax,
-            static (ctx, _) => TryCreateEnumModel(ctx));
+                JsonConverterAttributeFullName,
+                static (node, _) => node is EnumDeclarationSyntax,
+                static (ctx, _) => TryCreateEnumModel(ctx))
+            .WithTrackingName("GitLabQuery.EnumModel");
 
         context.RegisterSourceOutput(enums, static (spc, model) =>
         {
@@ -223,7 +245,7 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
                 spc.ReportDiagnostic(diagnostic);
             }
 
-            spc.AddSource($"{model.EnumName}QueryValues.g.cs", SourceText.From(RenderEnum(model), Encoding.UTF8));
+            spc.AddSource($"{model.GeneratedName}.g.cs", SourceText.From(RenderEnum(model), Encoding.UTF8));
         });
     }
 
@@ -234,11 +256,23 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             return null;
         }
 
-        OptionsModel model = new(optionsType.Name, Fqn(optionsType), optionsType.IsValueType);
+        OptionsModel model = new(
+            Fqn(optionsType),
+            optionsType.IsValueType,
+            optionsType.Name + "QueryExtensions",
+            GetGeneratedName(optionsType, "QueryExtensions"),
+            GetTypeParameters(optionsType));
         Dictionary<string, string> claimedNames = new(StringComparer.Ordinal);
 
-        foreach (IPropertySymbol property in optionsType.GetMembers().OfType<IPropertySymbol>())
+        // This is the hottest semantic-analysis loop in the generator. Avoid OfType's iterator and
+        // virtual enumerable plumbing: the compiler may visit hundreds of query options in one build.
+        foreach (ISymbol member in optionsType.GetMembers())
         {
+            if (member is not IPropertySymbol property)
+            {
+                continue;
+            }
+
             if (property.IsStatic || property.IsIndexer || property.GetMethod is null ||
                 property.DeclaredAccessibility != Accessibility.Public ||
                 HasAttribute(property, IgnoreAttributeFullName))
@@ -288,7 +322,8 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             }
 
             claimedNames.Add(wireName, property.Name);
-            model.Properties.Add(new PropertyModel(property.Name, wireName, kind, enumHelper, repeated));
+            model.Properties.Add(new PropertyModel(EscapeIdentifier(property.Name), wireName, kind, enumHelper,
+                repeated));
         }
 
         if (model.Properties.Count == 0 && model.Diagnostics.Count == 0)
@@ -297,6 +332,7 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
                 NoMappableProperties, optionsType.Locations.FirstOrDefault() ?? Location.None, optionsType.Name));
         }
 
+        model.FreezeForIncrementalCache();
         return model;
     }
 
@@ -353,7 +389,7 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             }
 
             kind = QueryKind.Enum;
-            enumHelper = $"global::{enumType.ContainingNamespace.ToDisplayString()}.{enumType.Name}QueryValues";
+            enumHelper = GetQualifiedGeneratedName(enumType, "QueryValues");
             return IsNullableOrReferenceType(type);
         }
 
@@ -394,7 +430,7 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
                type is not INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T };
     }
 
-    private static string RenderOptions(OptionsModel model)
+    private static string RenderOptions(OptionsModel model, string generatedName)
     {
         StringBuilder builder = new();
         builder.AppendLine("// <auto-generated/>");
@@ -402,7 +438,7 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         builder.AppendLine();
         builder.Append("namespace ").AppendLine(RoutingNamespace);
         builder.AppendLine("{");
-        builder.Append("    internal static class ").Append(model.TypeName).AppendLine("QueryExtensions");
+        builder.Append("    internal static class ").Append(generatedName).AppendLine();
         builder.AppendLine("    {");
         builder.AppendLine("        /// <summary>");
         builder.AppendLine("        /// The wire names this type contributes, in order. Lets a test assert the exact");
@@ -412,9 +448,11 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             .Append(string.Join(",", model.Properties.Select(static property => property.WireName)))
             .AppendLine("\";");
         builder.AppendLine();
-        builder.Append("        public static ").Append(BuilderTypeName).AppendLine(" QueryFrom(");
+        builder.Append("        public static ").Append(BuilderTypeName).Append(" QueryFrom")
+            .Append(model.TypeParameters.Declaration).AppendLine("(");
         builder.Append("            this ").Append(BuilderTypeName).AppendLine(" builder,");
         builder.Append("            ").Append(model.FullyQualifiedType).AppendLine("? options)");
+        AppendTypeParameterConstraints(builder, model.TypeParameters, "        ");
         builder.AppendLine("        {");
         builder.AppendLine("            if (options is null)");
         builder.AppendLine("            {");
@@ -462,11 +500,20 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
             return null;
         }
 
-        EnumModel model = new(enumType.Name, enumType.ContainingNamespace.ToDisplayString(), Fqn(enumType));
+        EnumModel model = new(
+            enumType.ContainingNamespace.IsGlobalNamespace ? null : enumType.ContainingNamespace.ToDisplayString(),
+            Fqn(enumType),
+            GetGeneratedName(enumType, "QueryValues"),
+            GetTypeParameters(enumType));
         HashSet<object> seenValues = new();
 
-        foreach (IFieldSymbol member in enumType.GetMembers().OfType<IFieldSymbol>())
+        foreach (ISymbol symbol in enumType.GetMembers())
         {
+            if (symbol is not IFieldSymbol member)
+            {
+                continue;
+            }
+
             if (!member.HasConstantValue || member.ConstantValue is null || !seenValues.Add(member.ConstantValue))
             {
                 // Aliases share a constant value, and two identical case labels would be CS0152.
@@ -482,9 +529,10 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
                 continue;
             }
 
-            model.Members.Add(new EnumMemberModel(member.Name, wireValue));
+            model.Members.Add(new EnumMemberModel(EscapeIdentifier(member.Name), wireValue));
         }
 
+        model.FreezeForIncrementalCache();
         return model;
     }
 
@@ -494,36 +542,53 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         builder.AppendLine("// <auto-generated/>");
         builder.AppendLine("#nullable enable");
         builder.AppendLine();
-        builder.Append("namespace ").AppendLine(model.Namespace);
-        builder.AppendLine("{");
-        builder.Append("    internal static class ").Append(model.EnumName).AppendLine("QueryValues");
-        builder.AppendLine("    {");
-        builder.Append("        public static string ToApiValue(this ").Append(model.FullyQualifiedType)
+        if (model.Namespace is not null)
+        {
+            builder.Append("namespace ").AppendLine(model.Namespace);
+            builder.AppendLine("{");
+        }
+
+        // Query options live in GitLab.Client.Routing while their enums remain contracts. The assembly
+        // boundary is explicitly friend-scoped, so this implementation detail never needs to become ABI.
+        string indentation = model.Namespace is null ? string.Empty : "    ";
+        builder.Append(indentation).Append("internal static class ").Append(model.GeneratedName).AppendLine();
+        builder.Append(indentation).AppendLine("{");
+        builder.Append(indentation).Append("    public static string ToApiValue")
+            .Append(model.TypeParameters.Declaration).Append("(this ").Append(model.FullyQualifiedType)
             .AppendLine(" value)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            switch (value)");
-        builder.AppendLine("            {");
+        AppendTypeParameterConstraints(builder, model.TypeParameters, indentation + "    ");
+        builder.Append(indentation).AppendLine("    {");
+        builder.Append(indentation).AppendLine("        switch (value)");
+        builder.Append(indentation).AppendLine("        {");
 
         foreach (EnumMemberModel member in model.Members)
         {
-            builder.Append("                case ").Append(model.FullyQualifiedType).Append('.')
+            builder.Append(indentation).Append("            case ").Append(model.FullyQualifiedType).Append('.')
                 .Append(member.MemberName).AppendLine(":");
-            builder.Append("                    return \"").Append(member.WireValue).AppendLine("\";");
+            builder.Append(indentation).Append("                return ")
+                .Append(SyntaxFactory.Literal(member.WireValue).ToString()).AppendLine(";");
         }
 
-        builder.AppendLine("                default:");
-        builder.AppendLine(
-            "                    throw new global::System.ArgumentOutOfRangeException(nameof(value), value, null);");
-        builder.AppendLine("            }");
-        builder.AppendLine("        }");
+        builder.Append(indentation).AppendLine("            default:");
+        builder.Append(indentation).AppendLine(
+            "                throw new global::System.ArgumentOutOfRangeException(nameof(value), value, null);");
+        builder.Append(indentation).AppendLine("        }");
+        builder.Append(indentation).AppendLine("    }");
         builder.AppendLine();
-        builder.Append("        public static string? ToApiValue(this ").Append(model.FullyQualifiedType)
+        builder.Append(indentation).Append("    public static string? ToApiValue")
+            .Append(model.TypeParameters.Declaration).Append("(this ").Append(model.FullyQualifiedType)
             .AppendLine("? value)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            return value is { } notNull ? ToApiValue(notNull) : null;");
-        builder.AppendLine("        }");
-        builder.AppendLine("    }");
-        builder.AppendLine("}");
+        AppendTypeParameterConstraints(builder, model.TypeParameters, indentation + "    ");
+        builder.Append(indentation).AppendLine("    {");
+        builder.Append(indentation).AppendLine("        return value is { } notNull ? ToApiValue(notNull) : null;");
+        builder.Append(indentation).AppendLine("    }");
+        builder.Append(indentation).AppendLine("}");
+
+        if (model.Namespace is not null)
+        {
+            builder.AppendLine("}");
+        }
+
         return builder.ToString();
     }
 
@@ -608,6 +673,224 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     }
 
+    /// <summary>
+    ///     The generated declarations all live in a shared implementation namespace, so a source type's
+    ///     short name is not sufficient. For example, <c>Alpha.ListOptions</c> and
+    ///     <c>Beta.ListOptions</c> would otherwise both emit <c>ListOptionsQueryExtensions</c>.
+    ///     The readable prefix plus stable FNV-1a suffix keeps the generated source inspectable while
+    ///     separating namespaces, nested types and generic arity without exposing a new API surface.
+    /// </summary>
+    private static string GetGeneratedName(ITypeSymbol type, string suffix)
+    {
+        string fullyQualifiedType = Fqn(type);
+        StringBuilder name = new("__GitLabQuery_");
+
+        // Retain enough of the type's identity to make obj/Generated useful during review while keeping
+        // hint names comfortably below common path-length limits for deeply-qualified source types.
+        int readablePrefixLength = Math.Min(fullyQualifiedType.Length, 80);
+        for (int index = 0; index < readablePrefixLength; index++)
+        {
+            char character = fullyQualifiedType[index];
+            name.Append(char.IsLetterOrDigit(character) ? character : '_');
+        }
+
+        name.Append('_').Append(ComputeStableHash(fullyQualifiedType).ToString("X16",
+            CultureInfo.InvariantCulture));
+        name.Append('_').Append(suffix);
+        return name.ToString();
+    }
+
+    private static string GetQualifiedGeneratedName(INamedTypeSymbol type, string suffix)
+    {
+        string generatedName = GetGeneratedName(type, suffix);
+        return type.ContainingNamespace.IsGlobalNamespace
+            ? $"global::{generatedName}"
+            : $"global::{type.ContainingNamespace.ToDisplayString()}.{generatedName}";
+    }
+
+    private static string GetOptionsGeneratedName(
+        OptionsModel candidate,
+        ImmutableArray<OptionsModel?> allOptions)
+    {
+        int matchingTypeNames = 0;
+        foreach (OptionsModel? model in allOptions)
+        {
+            if (model is not null && string.Equals(model.LegacyGeneratedName, candidate.LegacyGeneratedName,
+                    StringComparison.Ordinal) && ++matchingTypeNames > 1)
+            {
+                // The established short name is retained for every non-ambiguous option type. This
+                // protects existing internal query-name assertions, while a collision gets a fully
+                // deterministic private name instead of a duplicate declaration or hint name.
+                return candidate.UniqueGeneratedName;
+            }
+        }
+
+        return candidate.LegacyGeneratedName;
+    }
+
+    private static string CreateOptionsCacheKey(OptionsModel model)
+    {
+        StringBuilder builder = new();
+        AppendCachePart(builder, model.FullyQualifiedType);
+        AppendCachePart(builder, model.IsValueType ? "1" : "0");
+        AppendCachePart(builder, model.LegacyGeneratedName);
+        AppendCachePart(builder, model.UniqueGeneratedName);
+        AppendCachePart(builder, model.TypeParameters.CacheKey);
+
+        foreach (PropertyModel property in model.Properties)
+        {
+            AppendCachePart(builder, property.PropertyName);
+            AppendCachePart(builder, property.WireName);
+            AppendCachePart(builder, ((int)property.Kind).ToString(CultureInfo.InvariantCulture));
+            AppendCachePart(builder, property.EnumHelper);
+            AppendCachePart(builder, property.Repeated ? "1" : "0");
+        }
+
+        foreach (Diagnostic diagnostic in model.Diagnostics)
+        {
+            AppendDiagnosticCacheKey(builder, diagnostic);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string CreateEnumCacheKey(EnumModel model)
+    {
+        StringBuilder builder = new();
+        AppendCachePart(builder, model.Namespace);
+        AppendCachePart(builder, model.FullyQualifiedType);
+        AppendCachePart(builder, model.GeneratedName);
+        AppendCachePart(builder, model.TypeParameters.CacheKey);
+
+        foreach (EnumMemberModel member in model.Members)
+        {
+            AppendCachePart(builder, member.MemberName);
+            AppendCachePart(builder, member.WireValue);
+        }
+
+        foreach (Diagnostic diagnostic in model.Diagnostics)
+        {
+            AppendDiagnosticCacheKey(builder, diagnostic);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendDiagnosticCacheKey(StringBuilder builder, Diagnostic diagnostic)
+    {
+        AppendCachePart(builder, diagnostic.Id);
+        AppendCachePart(builder, diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        AppendCachePart(builder, diagnostic.Location.SourceTree?.FilePath);
+        AppendCachePart(builder, diagnostic.Location.SourceSpan.Start.ToString(CultureInfo.InvariantCulture));
+        AppendCachePart(builder, diagnostic.Location.SourceSpan.Length.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static void AppendCachePart(StringBuilder builder, string? value)
+    {
+        if (value is null)
+        {
+            builder.Append("-1|");
+            return;
+        }
+
+        builder.Append(value.Length).Append(':').Append(value).Append('|');
+    }
+
+    private static ulong ComputeStableHash(string value)
+    {
+        const ulong OffsetBasis = 14695981039346656037;
+        const ulong Prime = 1099511628211;
+
+        ulong hash = OffsetBasis;
+        foreach (char character in value)
+        {
+            hash ^= character;
+            hash *= Prime;
+        }
+
+        return hash;
+    }
+
+    private static TypeParameterModel GetTypeParameters(INamedTypeSymbol type)
+    {
+        Stack<INamedTypeSymbol> containingTypes = new();
+        for (INamedTypeSymbol? current = type; current is not null; current = current.ContainingType)
+        {
+            containingTypes.Push(current);
+        }
+
+        List<ITypeParameterSymbol> parameters = new();
+        while (containingTypes.Count > 0)
+        {
+            INamedTypeSymbol current = containingTypes.Pop();
+            parameters.AddRange(current.TypeParameters.Where(parameter =>
+                SymbolEqualityComparer.Default.Equals(parameter.ContainingSymbol, current)));
+        }
+
+        return new TypeParameterModel(parameters);
+    }
+
+    private static void AppendTypeParameterConstraints(
+        StringBuilder builder,
+        TypeParameterModel parameters,
+        string indentation)
+    {
+        foreach (ITypeParameterSymbol parameter in parameters.Symbols)
+        {
+            List<string> constraints = GetTypeParameterConstraints(parameter);
+
+            if (constraints.Count > 0)
+            {
+                builder.Append(indentation).Append("where ").Append(EscapeIdentifier(parameter.Name))
+                    .Append(" : ").Append(string.Join(", ", constraints)).AppendLine();
+            }
+        }
+    }
+
+    private static List<string> GetTypeParameterConstraints(ITypeParameterSymbol parameter)
+    {
+        List<string> constraints = new();
+
+        if (parameter.HasUnmanagedTypeConstraint)
+        {
+            constraints.Add("unmanaged");
+        }
+        else if (parameter.HasValueTypeConstraint)
+        {
+            constraints.Add("struct");
+        }
+        else if (parameter.HasReferenceTypeConstraint)
+        {
+            constraints.Add(parameter.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated
+                ? "class?"
+                : "class");
+        }
+        else if (parameter.HasNotNullConstraint)
+        {
+            constraints.Add("notnull");
+        }
+
+        foreach (ITypeSymbol constraintType in parameter.ConstraintTypes)
+        {
+            constraints.Add(Fqn(constraintType));
+        }
+
+        if (parameter.HasConstructorConstraint)
+        {
+            constraints.Add("new()");
+        }
+
+        return constraints;
+    }
+
+    private static string EscapeIdentifier(string identifier)
+    {
+        return SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None ||
+               SyntaxFacts.GetContextualKeywordKind(identifier) != SyntaxKind.None
+            ? "@" + identifier
+            : identifier;
+    }
+
     private enum QueryKind
     {
         String,
@@ -623,12 +906,24 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
 
     // Plain classes, not records: a record's generated equality would compare any symbol-typed member
     // with reference equality instead of SymbolEqualityComparer (RS1024). Same trade-off
-    // GenerateClientLayersGenerator already documents and accepts.
-    private sealed class OptionsModel(string typeName, string fullyQualifiedType, bool isValueType)
+    // Source-generated enum helpers keep the mapping co-located with the contract enum.
+    private sealed class OptionsModel : IEquatable<OptionsModel>
     {
-        public string TypeName { get; } = typeName;
+        public OptionsModel(
+            string fullyQualifiedType,
+            bool isValueType,
+            string legacyGeneratedName,
+            string uniqueGeneratedName,
+            TypeParameterModel typeParameters)
+        {
+            FullyQualifiedType = fullyQualifiedType;
+            IsValueType = isValueType;
+            LegacyGeneratedName = legacyGeneratedName;
+            UniqueGeneratedName = uniqueGeneratedName;
+            TypeParameters = typeParameters;
+        }
 
-        public string FullyQualifiedType { get; } = fullyQualifiedType;
+        public string FullyQualifiedType { get; }
 
         /// <summary>
         ///     Whether the annotated type is a struct rather than a class/record. Drives whether the
@@ -636,11 +931,39 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         ///     where <c>T?</c> means nullable reference) or <c>options.Value.</c> (value type, where
         ///     <c>T?</c> means <see cref="System.Nullable{T}" />, which does not forward member access).
         /// </summary>
-        public bool IsValueType { get; } = isValueType;
+        public bool IsValueType { get; }
+
+        public string LegacyGeneratedName { get; }
+
+        public string UniqueGeneratedName { get; }
+
+        public TypeParameterModel TypeParameters { get; }
 
         public List<PropertyModel> Properties { get; } = new();
 
         public List<Diagnostic> Diagnostics { get; } = new();
+
+        private string CacheKey { get; set; } = string.Empty;
+
+        public bool Equals(OptionsModel? other)
+        {
+            return other is not null && string.Equals(CacheKey, other.CacheKey, StringComparison.Ordinal);
+        }
+
+        public void FreezeForIncrementalCache()
+        {
+            CacheKey = CreateOptionsCacheKey(this);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is OptionsModel other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return StringComparer.Ordinal.GetHashCode(CacheKey);
+        }
     }
 
     private sealed class PropertyModel(
@@ -661,17 +984,60 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         public bool Repeated { get; } = repeated;
     }
 
-    private sealed class EnumModel(string enumName, string namespaceName, string fullyQualifiedType)
+    /// <summary>
+    ///     The minimal source-output identity for one query type. The complete collected options array
+    ///     is intentionally not retained here: it is only an input to collision resolution, and keeping
+    ///     it would invalidate every generated source whenever any unrelated options type changed.
+    /// </summary>
+    private readonly record struct OptionsSourceInput(OptionsModel? Model, string? GeneratedName);
+
+    private sealed class EnumModel : IEquatable<EnumModel>
     {
-        public string EnumName { get; } = enumName;
+        public EnumModel(
+            string? namespaceName,
+            string fullyQualifiedType,
+            string generatedName,
+            TypeParameterModel typeParameters)
+        {
+            Namespace = namespaceName;
+            FullyQualifiedType = fullyQualifiedType;
+            GeneratedName = generatedName;
+            TypeParameters = typeParameters;
+        }
 
-        public string Namespace { get; } = namespaceName;
+        public string? Namespace { get; }
 
-        public string FullyQualifiedType { get; } = fullyQualifiedType;
+        public string FullyQualifiedType { get; }
+
+        public string GeneratedName { get; }
+
+        public TypeParameterModel TypeParameters { get; }
 
         public List<EnumMemberModel> Members { get; } = new();
 
         public List<Diagnostic> Diagnostics { get; } = new();
+
+        private string CacheKey { get; set; } = string.Empty;
+
+        public bool Equals(EnumModel? other)
+        {
+            return other is not null && string.Equals(CacheKey, other.CacheKey, StringComparison.Ordinal);
+        }
+
+        public void FreezeForIncrementalCache()
+        {
+            CacheKey = CreateEnumCacheKey(this);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is EnumModel other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return StringComparer.Ordinal.GetHashCode(CacheKey);
+        }
     }
 
     private sealed class EnumMemberModel(string memberName, string wireValue)
@@ -679,5 +1045,35 @@ public sealed class GitLabQueryGenerator : IIncrementalGenerator
         public string MemberName { get; } = memberName;
 
         public string WireValue { get; } = wireValue;
+    }
+
+    private sealed class TypeParameterModel
+    {
+        public TypeParameterModel(IEnumerable<ITypeParameterSymbol> symbols)
+        {
+            Symbols = symbols.ToArray();
+
+            StringBuilder cacheKey = new();
+            foreach (ITypeParameterSymbol parameter in Symbols)
+            {
+                AppendCachePart(cacheKey, EscapeIdentifier(parameter.Name));
+                foreach (string constraint in GetTypeParameterConstraints(parameter))
+                {
+                    AppendCachePart(cacheKey, constraint);
+                }
+
+                AppendCachePart(cacheKey, ";");
+            }
+
+            CacheKey = cacheKey.ToString();
+        }
+
+        public ITypeParameterSymbol[] Symbols { get; }
+
+        public string CacheKey { get; }
+
+        public string Declaration => Symbols.Length == 0
+            ? string.Empty
+            : "<" + string.Join(", ", Symbols.Select(static parameter => EscapeIdentifier(parameter.Name))) + ">";
     }
 }

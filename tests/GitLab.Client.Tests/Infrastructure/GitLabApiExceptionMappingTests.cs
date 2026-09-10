@@ -5,9 +5,10 @@ using System.Text;
 
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
-using GitLab.Client.Infrastructure.Serialization;
 using GitLab.Client.Models;
 using GitLab.Client.Tests.TestSupport;
+
+using GitLabJsonContext = GitLab.Client.Serialization.GitLabJsonContext;
 
 namespace GitLab.Client.Tests.Infrastructure;
 
@@ -182,6 +183,24 @@ public sealed class GitLabApiExceptionMappingTests
         Assert.Equal("https://gitlab.example/api/v4/projects/42", exception.RequestUri?.AbsoluteUri);
         Assert.Contains("GET https://gitlab.example/api/v4/projects/42 -> 404", exception.ToString(),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Exception_ToString_RedactsUriUserInfoQueryAndFragment()
+    {
+        GitLabApiException exception = new(
+            HttpStatusCode.NotFound,
+            "Not found",
+            null,
+            HttpMethod.Get,
+            new Uri("https://token@gitlab.example/api/v4/projects/42?private_token=secret#details"));
+
+        string diagnostic = exception.ToString();
+
+        Assert.Contains("GET https://gitlab.example/api/v4/projects/42 -> 404", diagnostic, StringComparison.Ordinal);
+        Assert.DoesNotContain("token", diagnostic, StringComparison.Ordinal);
+        Assert.DoesNotContain("private_token", diagnostic, StringComparison.Ordinal);
+        Assert.DoesNotContain("#details", diagnostic, StringComparison.Ordinal);
     }
 
     [Fact]

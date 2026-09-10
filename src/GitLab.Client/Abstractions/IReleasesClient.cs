@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -13,6 +15,13 @@ public interface IReleasesClient
     IAsyncEnumerable<GitLabRelease> ListAsync(ProjectId projectId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Lists every release in a project using the supplied sorting, rendered-description and updated-at
+    ///     filters.
+    /// </summary>
+    IAsyncEnumerable<GitLabRelease> ListAsync(ProjectId projectId, ReleaseListOptions? options,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Lists every release across the projects of a group (<c>GET /groups/:id/releases</c>).
     /// </summary>
     IAsyncEnumerable<GitLabRelease> ListForGroupAsync(GroupId groupId, GroupReleaseListOptions? options = null,
@@ -20,6 +29,13 @@ public interface IReleasesClient
 
     /// <summary>Retrieves one release by its Git tag.</summary>
     Task<GitLabRelease> GetAsync(ProjectId projectId, string tagName, CancellationToken cancellationToken = default);
+
+    /// <summary>Retrieves one release by its Git tag with the requested response projection.</summary>
+    Task<GitLabRelease> GetAsync(
+        ProjectId projectId,
+        string tagName,
+        ReleaseGetOptions? options,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Creates a release (<c>POST /projects/:id/releases</c>).</summary>
     Task<GitLabRelease> CreateAsync(ProjectId projectId, CreateReleaseRequest request,

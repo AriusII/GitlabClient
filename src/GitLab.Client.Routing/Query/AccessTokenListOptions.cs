@@ -1,0 +1,48 @@
+using GitLab.Client.SourceGenerators;
+
+namespace GitLab.Client.Query;
+
+/// <summary>
+///     Filters for listing project or group access tokens (<c>GET /projects/:id/access_tokens</c>,
+///     <c>GET /groups/:id/access_tokens</c>) and for the service-account personal access token
+///     listings under <c>/projects/:id/service_accounts/:user_id/personal_access_tokens</c> and
+///     <c>/groups/:id/service_accounts/:user_id/personal_access_tokens</c>, whose filter set GitLab
+///     declares identically.
+/// </summary>
+[GitLabQuery]
+public readonly record struct AccessTokenListOptions
+{
+    /// <summary>Return only tokens whose revoked state matches this value.</summary>
+    public bool? Revoked { get; init; }
+
+    /// <summary><c>active</c> or <c>inactive</c>.</summary>
+    public string? State { get; init; }
+
+    /// <summary>Filters tokens by name.</summary>
+    public string? Search { get; init; }
+
+    public string? Sort { get; init; }
+
+    /// <summary>Return only tokens created before this instant.</summary>
+    public DateTimeOffset? CreatedBefore { get; init; }
+
+    /// <summary>Return only tokens created after this instant.</summary>
+    public DateTimeOffset? CreatedAfter { get; init; }
+
+    /// <summary>Return only tokens last used before this instant.</summary>
+    public DateTimeOffset? LastUsedBefore { get; init; }
+
+    /// <summary>Return only tokens last used after this instant.</summary>
+    public DateTimeOffset? LastUsedAfter { get; init; }
+
+    /// <summary>Return only tokens expiring before this date. GitLab types this one as a plain date.</summary>
+    public DateOnly? ExpiresBefore { get; init; }
+
+    /// <summary>Return only tokens expiring after this date. GitLab types this one as a plain date.</summary>
+    public DateOnly? ExpiresAfter { get; init; }
+
+    /// <summary>The one-based result page to retrieve.</summary>
+    public int? Page { get; init; }
+
+    public int? PerPage { get; init; }
+}

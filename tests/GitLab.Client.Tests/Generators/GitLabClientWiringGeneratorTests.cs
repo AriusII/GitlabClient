@@ -1,255 +1,209 @@
+using GitLab.Client.SourceGenerators;
+
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+
 namespace GitLab.Client.Tests.Generators;
 
-/// <summary>
-///     Drives <c>GitLabClientWiringGenerator</c> over inline compilations. The first two tests pin the
-///     cross-generator claim the whole design rests on, in both directions.
-/// </summary>
+/// <summary>Tests the direct endpoint composition generator independently of the compiled client package.</summary>
 public sealed class GitLabClientWiringGeneratorTests
 {
-    /// <summary>
-    ///     Generated code MAY reference other generated code: both generators' output lands in one
-    ///     compilation and is bound together, so the registrations resolve the Service and Controller
-    ///     classes the other generator emitted.
-    /// </summary>
-    [Fact]
-    public void BothGenerators_Together_CompileCleanly()
-    {
-        GeneratorHarnessResult result =
-            GeneratorSources.RunBoth(GeneratorSources.Resource(), GeneratorSources.RootScaffoldSource);
+    private const string RegistrationsHintName = "GitLabClient.Registrations.g.cs";
+    private const string RootClientHintName = "GitLabClient.Root.g.cs";
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        GeneratorSources.AssertCompiles(result);
-        Assert.Contains("global::Sample.Services.ThingsService",
-            result.Source(GeneratorSources.RegistrationsHintName), StringComparison.Ordinal);
-    }
+    private const string DirectEndpoints = """
+                                           namespace Microsoft.Extensions.DependencyInjection
+                                           {
+                                               public interface IServiceCollection { }
 
-    /// <summary>
-    ///     Neither generator can ANALYSE the other's output. With the layer generator absent the emission
-    ///     is unchanged and the compiler - not the generator - is the one that complains, which proves the
-    ///     wiring generator names those classes rather than resolving them.
-    /// </summary>
-    [Fact]
-    public void WiringGeneratorAlone_LeavesUnresolvedServiceAndControllerTypes()
-    {
-        GeneratorHarnessResult result =
-            GeneratorSources.RunWiring(GeneratorSources.Resource(), GeneratorSources.RootScaffoldSource);
+                                               public static partial class GitLabClientServiceCollectionExtensions
+                                               {
+                                                   private static partial void AddResourceClients(IServiceCollection services);
+                                               }
+                                           }
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        Assert.Contains("global::Sample.Services.ThingsService",
-            result.Source(GeneratorSources.RegistrationsHintName), StringComparison.Ordinal);
-        Assert.Contains(result.CompilationErrors,
-            diagnostic => diagnostic.GetMessage().Contains("ThingsService", StringComparison.Ordinal));
-    }
+                                           namespace Microsoft.Extensions.DependencyInjection.Extensions
+                                           {
+                                               public static class ServiceCollectionDescriptorExtensions
+                                               {
+                                                   public static void TryAddSingleton<TService, TImplementation>(
+                                                       this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+                                                   {
+                                                   }
+                                               }
+                                           }
 
-    [Fact]
-    public void RootClientMembersAreExplicitInterfaceImplementations()
-    {
-        GeneratorHarnessResult result =
-            GeneratorSources.RunBoth(GeneratorSources.Resource(), GeneratorSources.RootScaffoldSource);
+                                           namespace GitLab.Client.Abstractions
+                                           {
+                                               public interface IThingsClient { }
+                                               public interface IGadgetsClient { }
 
-        // Explicit implementation is what makes the compiler enforce the pairing in both directions:
-        // an orphaned attributed repository becomes CS0539 naming the exact member.
-        Assert.Contains("global::GitLab.Client.Abstractions.IGitLabClient.Things =>",
-            result.Source(GeneratorSources.RootClientHintName), StringComparison.Ordinal);
-    }
+                                               public interface IGitLabClient
+                                               {
+                                                   IGadgetsClient Gadgets { get; }
+                                                   IThingsClient Things { get; }
+                                               }
+                                           }
+
+                                           namespace GitLab.Client.Endpoints
+                                           {
+                                               internal sealed class ThingsClient : global::GitLab.Client.Abstractions.IThingsClient { }
+                                               internal sealed class GadgetsClient : global::GitLab.Client.Abstractions.IGadgetsClient { }
+                                           }
+                                           """;
 
     [Fact]
-    public void AttributedResourceWithNoRootProperty_IsACompileError()
+    public void EmitsClosedDirectEndpointRegistrationsAndExplicitRootPropertiesInOrdinalOrder()
     {
-        GeneratorHarnessResult result =
-            GeneratorSources.RunBoth(GeneratorSources.Resource(), GeneratorSources.EmptyRootScaffoldSource);
+        GeneratorHarnessResult result = GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], DirectEndpoints);
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        Assert.Contains(result.CompilationErrors,
-            diagnostic => string.Equals(diagnostic.Id, "CS0539", StringComparison.Ordinal));
-    }
+        GeneratorAssertions.AssertNoDiagnostics(result);
+        GeneratorAssertions.AssertCompiles(result);
 
-    [Fact]
-    public void Registrations_AreEmittedInOrdinalOrderRegardlessOfSourceOrder()
-    {
-        string things = GeneratorSources.Resource();
-        string gadgets = things.Replace("Things", "Gadgets", StringComparison.Ordinal);
-        string scaffold = """
-                          namespace GitLab.Client.Abstractions
-                          {
-                              public interface IGitLabClient
-                              {
-                                  global::Sample.Abstractions.IThingsClient Things { get; }
+        string registrations = result.Source(RegistrationsHintName);
+        string root = result.Source(RootClientHintName);
 
-                                  global::Sample.Abstractions.IGadgetsClient Gadgets { get; }
-                              }
-                          }
-
-                          namespace Microsoft.Extensions.DependencyInjection
-                          {
-                              public static partial class GitLabClientServiceCollectionExtensions
-                              {
-                                  private static partial void AddResourceClients(
-                                      Microsoft.Extensions.DependencyInjection.IServiceCollection services);
-                              }
-                          }
-                          """;
-
-        string forward = GeneratorSources.RunBoth(things, gadgets, scaffold)
-            .Source(GeneratorSources.RegistrationsHintName);
-        string reversed = GeneratorSources.RunBoth(gadgets, things, scaffold)
-            .Source(GeneratorSources.RegistrationsHintName);
-
-        Assert.Equal(forward, reversed, StringComparer.Ordinal);
-        Assert.True(forward.IndexOf("GadgetsRepository", StringComparison.Ordinal)
-                    < forward.IndexOf("ThingsRepository", StringComparison.Ordinal));
+        Assert.Contains(
+            "TryAddSingleton<global::GitLab.Client.Abstractions.IGadgetsClient, global::GitLab.Client.Endpoints.GadgetsClient>()",
+            registrations, StringComparison.Ordinal);
+        Assert.Contains("global::GitLab.Client.Abstractions.IGitLabClient.Gadgets => _gadgets",
+            root, StringComparison.Ordinal);
+        Assert.True(registrations.IndexOf("IGadgetsClient", StringComparison.Ordinal) <
+                    registrations.IndexOf("IThingsClient", StringComparison.Ordinal));
+        Assert.DoesNotContain("GitLab.Client.Repositories.", registrations, StringComparison.Ordinal);
+        Assert.DoesNotContain("GitLab.Client.Services.", registrations, StringComparison.Ordinal);
+        Assert.DoesNotContain("GitLab.Client.Controllers.", registrations, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RegisterFalse_SuppressesTheRegistrationButNotTheRootProperty()
+    public void ReportsAMissingOrIncompatibleDirectEndpointAtGenerationTime()
     {
-        GeneratorHarnessResult result = GeneratorSources.RunBoth(
-            GeneratorSources.Resource(", Register = false"), GeneratorSources.RootScaffoldSource);
+        string missingEndpoint = DirectEndpoints.Replace(
+            "internal sealed class GadgetsClient : global::GitLab.Client.Abstractions.IGadgetsClient { }",
+            "internal sealed class GadgetsStore { }", StringComparison.Ordinal);
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        GeneratorSources.AssertCompiles(result);
-        Assert.DoesNotContain("ThingsRepository", result.Source(GeneratorSources.RegistrationsHintName),
+        GeneratorHarnessResult result = GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], missingEndpoint);
+
+        GeneratorAssertions.AssertDiagnostic(result, "GLC0202");
+    }
+
+    [Fact]
+    public void ReportsWhyAResourcePropertyWithASetterIsInvalid()
+    {
+        string mutableProperty = DirectEndpoints.Replace(
+            "IThingsClient Things { get; }",
+            "IThingsClient Things { get; set; }",
             StringComparison.Ordinal);
-        Assert.Contains("IGitLabClient.Things", result.Source(GeneratorSources.RootClientHintName),
-            StringComparison.Ordinal);
+
+        GeneratorHarnessResult result = GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], mutableProperty);
+
+        GeneratorAssertions.AssertDiagnostic(result, "GLC0201");
+        AssertInvalidRootPropertyDiagnostic(result, "a setter is not allowed");
     }
 
     [Fact]
-    public void ExposeOnRootClientFalse_SuppressesTheRootPropertyButNotTheRegistration()
+    public void ReportsWhyAStaticResourcePropertyIsInvalid()
     {
-        GeneratorHarnessResult result = GeneratorSources.RunBoth(
-            GeneratorSources.Resource(", ExposeOnRootClient = false"), GeneratorSources.EmptyRootScaffoldSource);
+        string staticProperty = DirectEndpoints.Replace(
+            "IThingsClient Things { get; }",
+            "static abstract IThingsClient Things { get; }",
+            StringComparison.Ordinal);
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        GeneratorSources.AssertCompiles(result);
-        Assert.Contains("ThingsRepository", result.Source(GeneratorSources.RegistrationsHintName),
-            StringComparison.Ordinal);
-        Assert.DoesNotContain("IGitLabClient.Things", result.Source(GeneratorSources.RootClientHintName),
-            StringComparison.Ordinal);
+        GeneratorHarnessResult result = GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], staticProperty);
+
+        GeneratorAssertions.AssertDiagnostic(result, "GLC0201");
+        AssertInvalidRootPropertyDiagnostic(result, "static properties are not supported");
     }
 
     [Fact]
-    public void RootPropertyName_OverridesTheDerivedName()
+    public void ReportsWhyAnIndexedResourcePropertyIsInvalid()
     {
-        const string Scaffold = """
-                                namespace GitLab.Client.Abstractions
-                                {
-                                    public interface IGitLabClient
-                                    {
-                                        global::Sample.Abstractions.IThingsClient Widgets { get; }
-                                    }
-                                }
+        string indexedProperty = DirectEndpoints.Replace(
+            "IThingsClient Things { get; }",
+            "IThingsClient this[int index] { get; }",
+            StringComparison.Ordinal);
 
-                                namespace Microsoft.Extensions.DependencyInjection
-                                {
-                                    public static partial class GitLabClientServiceCollectionExtensions
-                                    {
-                                        private static partial void AddResourceClients(
-                                            Microsoft.Extensions.DependencyInjection.IServiceCollection services);
-                                    }
-                                }
-                                """;
+        GeneratorHarnessResult result = GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], indexedProperty);
+
+        GeneratorAssertions.AssertDiagnostic(result, "GLC0201");
+        AssertInvalidRootPropertyDiagnostic(result, "indexers are not supported");
+    }
+
+    [Fact]
+    public void ReportsWhyAResourcePropertyWithoutAGetterIsInvalid()
+    {
+        string writeOnlyProperty = DirectEndpoints.Replace(
+            "IThingsClient Things { get; }",
+            "IThingsClient Things { set; }",
+            StringComparison.Ordinal);
 
         GeneratorHarnessResult result =
-            GeneratorSources.RunBoth(GeneratorSources.Resource(", RootPropertyName = \"Widgets\""), Scaffold);
+            GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], writeOnlyProperty);
 
-        GeneratorSources.AssertNoDiagnostics(result);
-        GeneratorSources.AssertCompiles(result);
-        Assert.Contains("IGitLabClient.Widgets", result.Source(GeneratorSources.RootClientHintName),
-            StringComparison.Ordinal);
+        GeneratorAssertions.AssertDiagnostic(result, "GLC0201");
+        AssertInvalidRootPropertyDiagnostic(result, "a getter is required");
     }
 
     [Fact]
-    public void Reports_GLC0101_WhenTwoResourcesClaimTheSameRootProperty()
+    public void EscapesAKeywordNamedResourcePropertyInTheExplicitRootImplementation()
     {
-        string things = GeneratorSources.Resource();
-        string gadgets = GeneratorSources.Resource(", RootPropertyName = \"Things\"")
-            .Replace("Things", "Gadgets", StringComparison.Ordinal)
-            .Replace("RootPropertyName = \"Gadgets\"", "RootPropertyName = \"Things\"", StringComparison.Ordinal);
+        string keywordProperty = DirectEndpoints.Replace(
+            "IThingsClient Things { get; }",
+            "IThingsClient @class { get; }",
+            StringComparison.Ordinal);
+
+        GeneratorHarnessResult result = GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], keywordProperty);
+
+        GeneratorAssertions.AssertNoDiagnostics(result);
+        GeneratorAssertions.AssertCompiles(result);
+        Assert.Contains("IGitLabClient.@class => _class", result.Source(RootClientHintName), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EscapesAContextualKeywordNamedResourcePropertyInTheExplicitRootImplementation()
+    {
+        string contextualKeywordProperty = DirectEndpoints.Replace(
+            "IThingsClient Things { get; }",
+            "IThingsClient required { get; }",
+            StringComparison.Ordinal);
 
         GeneratorHarnessResult result =
-            GeneratorSources.RunWiring(things, gadgets, GeneratorSources.RootScaffoldSource);
+            GeneratorTestHarness.Run([new GitLabClientWiringGenerator()], contextualKeywordProperty);
 
-        GeneratorSources.AssertDiagnostic(result, "GLC0101");
-    }
-
-    [Fact]
-    public void Reports_GLC0102_WhenTheClientInterfaceIsNotPublic()
-    {
-        string source = GeneratorSources.Resource()
-            .Replace("public interface IThingsClient", "internal interface IThingsClient",
-                StringComparison.Ordinal);
-
-        GeneratorHarnessResult result = GeneratorSources.RunWiring(source, GeneratorSources.EmptyRootScaffoldSource);
-
-        GeneratorSources.AssertDiagnostic(result, "GLC0102");
-    }
-
-    [Fact]
-    public void Reports_GLC0103_WhenTheRepositoryImplementationIsMissing()
-    {
-        string source = GeneratorSources.Resource()
-            .Replace("internal sealed class ThingsRepository : IThingsRepository",
-                "internal sealed class ThingsStore : IThingsRepository", StringComparison.Ordinal);
-
-        GeneratorHarnessResult result = GeneratorSources.RunWiring(source, GeneratorSources.RootScaffoldSource);
-
-        GeneratorSources.AssertDiagnostic(result, "GLC0103");
-        Assert.DoesNotContain("ThingsRepository>", result.Source(GeneratorSources.RegistrationsHintName),
+        GeneratorAssertions.AssertNoDiagnostics(result);
+        GeneratorAssertions.AssertCompiles(result);
+        Assert.Contains("IGitLabClient.@required => _required", result.Source(RootClientHintName),
             StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Reports_GLC0104_WhenRootPropertyNameIsNotAnIdentifier()
+    public void CachesTheWiringInputWhenAnUnrelatedSyntaxTreeIsAdded()
     {
-        GeneratorHarnessResult result = GeneratorSources.RunWiring(
-            GeneratorSources.Resource(", RootPropertyName = \"not an identifier\""),
-            GeneratorSources.EmptyRootScaffoldSource);
+        CSharpParseOptions parseOptions = new(LanguageVersion.CSharp14);
+        CSharpCompilation compilation = GeneratorTestHarness.CreateCompilation(parseOptions, DirectEndpoints);
+        GeneratorDriver driver = GeneratorTestHarness.CreateDriver([new GitLabClientWiringGenerator()], parseOptions);
 
-        GeneratorSources.AssertDiagnostic(result, "GLC0104");
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out _,
+            TestContext.Current.CancellationToken);
+
+        SyntaxTree unrelatedTree = CSharpSyntaxTree.ParseText(
+            "namespace Unrelated; internal sealed class UnrelatedType { }",
+            parseOptions,
+            "Unrelated.cs", null, TestContext.Current.CancellationToken);
+        CSharpCompilation updatedCompilation = compilation.AddSyntaxTrees(unrelatedTree);
+        driver = driver.RunGeneratorsAndUpdateCompilation(updatedCompilation, out _, out _,
+            TestContext.Current.CancellationToken);
+
+        GeneratorRunResult result = Assert.Single(driver.GetRunResult().Results);
+        IncrementalGeneratorRunStep input = Assert.Single(result.TrackedSteps["GitLabClientWiring.Input"]);
+        Assert.All(input.Outputs,
+            static output => Assert.Equal(IncrementalStepRunReason.Cached, output.Reason));
     }
 
-    /// <summary>
-    ///     Declaring the public contract before the repository behind it is a legitimate intermediate
-    ///     state, so an orphaned client interface must not be a diagnostic.
-    /// </summary>
-    [Fact]
-    public void OrphanClientInterface_IsNotAnError()
+    private static void AssertInvalidRootPropertyDiagnostic(GeneratorHarnessResult result, string reason)
     {
-        const string Orphan = """
-                              namespace Sample.Abstractions
-                              {
-                                  public interface IGizmosClient { int Get(int id); }
-                              }
-                              """;
-
-        GeneratorHarnessResult result = GeneratorSources.RunBoth(GeneratorSources.Resource(), Orphan,
-            GeneratorSources.RootScaffoldSource);
-
-        GeneratorSources.AssertNoDiagnostics(result);
-        GeneratorSources.AssertCompiles(result);
-    }
-
-    [Fact]
-    public void RegistrationsUseClosedGenericTryAddSingletonOnly()
-    {
-        GeneratorHarnessResult result =
-            GeneratorSources.RunBoth(GeneratorSources.Resource(), GeneratorSources.RootScaffoldSource);
-
-        // Only the code, never the explanatory comment header - which mentions the very things the
-        // generated code must not do.
-        string code = string.Join(
-            " ",
-            result.Source(GeneratorSources.RegistrationsHintName)
-                .Split('\n')
-                .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
-
-        // CLAUDE.md's "DI: explicit registration only" rule is about what runs at runtime. Generated or
-        // not, every registration must stay a closed-generic call with no reflection behind it.
-        Assert.Contains("services.TryAddSingleton<", code, StringComparison.Ordinal);
-        Assert.DoesNotContain("typeof(", code, StringComparison.Ordinal);
-        Assert.DoesNotContain("Activator", code, StringComparison.Ordinal);
-        Assert.DoesNotContain("GetTypes", code, StringComparison.Ordinal);
-        Assert.DoesNotContain("Assembly", code, StringComparison.Ordinal);
+        Diagnostic diagnostic = Assert.Single(result.GeneratorDiagnostics.Where(static candidate =>
+            string.Equals(candidate.Id, "GLC0201", StringComparison.Ordinal)));
+        Assert.Contains(reason, diagnostic.GetMessage(), StringComparison.Ordinal);
     }
 }

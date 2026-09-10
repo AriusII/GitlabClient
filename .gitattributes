@@ -4,4 +4,4 @@
 # driver does that automatically. It is safe here precisely because the edits are append-only by
 # convention (see CLAUDE.md) - do not extend it to files where two branches can rewrite the same line.
 src/GitLab.Client/Abstractions/IGitLabClient.cs merge=union
-src/GitLab.Client/Infrastructure/Serialization/GitLabJsonContext.cs merge=union
+src/GitLab.Client.Contracts/Serialization/GitLabJsonContext.cs merge=union

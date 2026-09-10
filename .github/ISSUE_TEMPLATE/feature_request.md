@@ -14,4 +14,4 @@ assignees: AriusII
 
 ## Additional context
 
-<!-- Link the relevant tag/operation in spec/index/<tag>.json, or the ROADMAP.md entry -->
+<!-- Link the relevant official GitLab REST API documentation and include the expected request/response shape. -->

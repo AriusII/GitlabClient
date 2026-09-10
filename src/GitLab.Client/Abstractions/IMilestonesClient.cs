@@ -1,5 +1,8 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -49,11 +52,11 @@ public interface IMilestonesClient
 
     /// <summary>Streams every issue assigned to a project milestone.</summary>
     IAsyncEnumerable<GitLabIssue> ListIssuesAsync(ProjectId projectId, long milestoneId,
-        CancellationToken cancellationToken = default);
+        MilestoneIssuableListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>Streams every merge request assigned to a project milestone.</summary>
     IAsyncEnumerable<GitLabMergeRequest> ListMergeRequestsAsync(ProjectId projectId, long milestoneId,
-        CancellationToken cancellationToken = default);
+        MilestoneIssuableListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Streams the burndown chart events of a project milestone. A Premium/Ultimate feature: on a plan
@@ -83,11 +86,11 @@ public interface IMilestonesClient
 
     /// <summary>Streams every issue assigned to a group milestone, across the group's projects.</summary>
     IAsyncEnumerable<GitLabIssue> ListIssuesForGroupAsync(GroupId groupId, long milestoneId,
-        CancellationToken cancellationToken = default);
+        MilestoneIssuableListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>Streams every merge request assigned to a group milestone, across the group's projects.</summary>
     IAsyncEnumerable<GitLabMergeRequest> ListMergeRequestsForGroupAsync(GroupId groupId, long milestoneId,
-        CancellationToken cancellationToken = default);
+        MilestoneIssuableListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Streams the burndown chart events of a group milestone. A Premium/Ultimate feature: on a plan

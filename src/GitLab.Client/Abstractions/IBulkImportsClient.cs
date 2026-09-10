@@ -1,4 +1,6 @@
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -63,7 +65,7 @@ public interface IBulkImportsClient
     ///     single run.
     /// </summary>
     IAsyncEnumerable<GitLabBulkImportEntity> ListEntitiesForImportAsync(long importId,
-        BulkImportEntityListOptions? options = null, CancellationToken cancellationToken = default);
+        BulkImportEntityForImportListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Gets one entity of a migration

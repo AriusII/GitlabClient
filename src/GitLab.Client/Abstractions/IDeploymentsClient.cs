@@ -1,5 +1,8 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 

@@ -6,8 +6,8 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace GitLab.Client.Tests.Generators;
 
 /// <summary>
-///     Compiles inline sources against the test host's own reference set and runs any combination of the
-///     two generators over them. This is the only way to observe what a generator does when its input is
+///     Compiles inline sources against the test host's own reference set and runs the supplied generators
+///     over them. This is the only way to observe what a generator does when its input is
 ///     wrong: a broken generator makes the whole test project fail to build, so nothing that fails at
 ///     generation time can be covered by tests that merely instantiate the generated types.
 /// </summary>
@@ -17,7 +17,7 @@ internal static class GeneratorTestHarness
 
     public static GeneratorHarnessResult Run(IEnumerable<IIncrementalGenerator> generators, params string[] sources)
     {
-        CSharpParseOptions parseOptions = new(LanguageVersion.Latest);
+        CSharpParseOptions parseOptions = new(LanguageVersion.CSharp14);
         CSharpCompilation compilation = CreateCompilation(parseOptions, sources);
 
         GeneratorDriver driver = CreateDriver(generators, parseOptions);

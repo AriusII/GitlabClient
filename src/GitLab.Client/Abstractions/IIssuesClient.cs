@@ -1,5 +1,8 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -226,9 +229,9 @@ public interface IIssuesClient
 
     /// <summary>
     ///     Removes a metric image from an incident
-    ///     (<c>DELETE /projects/:id/issues/:issue_iid/metric_images/:metric_image_id</c>). GitLab echoes the
-    ///     deleted image back, but this transport does not surface a body on <c>DELETE</c>.
+    ///     (<c>DELETE /projects/:id/issues/:issue_iid/metric_images/:metric_image_id</c>), returning the
+    ///     deleted image as supplied by GitLab.
     /// </summary>
-    Task DeleteMetricImageAsync(ProjectId projectId, long issueIid, long metricImageId,
+    Task<GitLabMetricImage> DeleteMetricImageAsync(ProjectId projectId, long issueIid, long metricImageId,
         CancellationToken cancellationToken = default);
 }

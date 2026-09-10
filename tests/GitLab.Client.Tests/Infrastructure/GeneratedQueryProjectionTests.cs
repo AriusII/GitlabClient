@@ -2,8 +2,10 @@ using System.Text.Json;
 
 using GitLab.Client.Domain;
 using GitLab.Client.Infrastructure.Routing;
-using GitLab.Client.Infrastructure.Serialization;
 using GitLab.Client.Models;
+using GitLab.Client.Query;
+
+using GitLabJsonContext = GitLab.Client.Serialization.GitLabJsonContext;
 
 namespace GitLab.Client.Tests.Infrastructure;
 
@@ -35,14 +37,16 @@ public sealed class GeneratedQueryProjectionTests
             "agent_type,status,created_after,created_before,per_page",
         [nameof(AllSnippetListOptionsQueryExtensions)] = "created_after,created_before,repository_storage,per_page",
         [nameof(BranchListOptionsQueryExtensions)] = "search,regex,sort,page,page_token,per_page",
-        [nameof(CommitListOptionsQueryExtensions)] = "ref_name,since,until,per_page",
-        [nameof(GroupBillableMemberListOptionsQueryExtensions)] = "search,sort,per_page",
+        [nameof(CommitListOptionsQueryExtensions)] =
+            "all,author,first_parent,follow,order,path,ref_name,since,until,trailers,with_stats,per_page",
+        [nameof(GroupBillableMemberListOptionsQueryExtensions)] = "search,sort,page,per_page",
         [nameof(GroupLabelGetOptionsQueryExtensions)] =
             "include_ancestor_groups,include_descendant_groups,only_group_labels",
         [nameof(GroupLabelListOptionsQueryExtensions)] =
             "with_counts,include_ancestor_groups,include_descendant_groups,only_group_labels,search,archived,per_page",
-        [nameof(GroupListOptionsQueryExtensions)] = "search,visibility,skip_groups,per_page",
-        [nameof(GroupProtectedBranchListOptionsQueryExtensions)] = "search,per_page",
+        [nameof(GroupListOptionsQueryExtensions)] =
+            "search,visibility,skip_groups,per_page,statistics,archived,all_available,owned,order_by,sort,min_access_level,top_level_only,marked_for_deletion_on,active,repository_storage,with_custom_attributes",
+        [nameof(GroupProtectedBranchListOptionsQueryExtensions)] = "search,page,per_page",
         [nameof(GroupReleaseListOptionsQueryExtensions)] = "sort,simple,per_page",
         [nameof(GroupTransferLocationListOptionsQueryExtensions)] = "search,per_page",
         [nameof(GroupUserListOptionsQueryExtensions)] =
@@ -64,10 +68,12 @@ public sealed class GeneratedQueryProjectionTests
             "state,iids,title,search,include_parent_milestones,include_ancestors,updated_before,updated_after,per_page",
         [nameof(PipelineListOptionsQueryExtensions)] =
             "status,ref,sha,source,name,username,scope,updated_after,updated_before,created_after,created_before,yaml_errors,order_by,sort,per_page",
-        [nameof(PipelineScheduleListOptionsQueryExtensions)] = "scope,per_page",
-        [nameof(PipelineScheduleRunListOptionsQueryExtensions)] = "scope,status,sort,per_page",
+        [nameof(PipelineScheduleListOptionsQueryExtensions)] = "scope,page,per_page",
+        [nameof(PipelineScheduleRunListOptionsQueryExtensions)] =
+            "scope,status,updated_before,updated_after,created_before,created_after,sort,page,per_page",
         [nameof(ProjectListOptionsQueryExtensions)] =
             "search,visibility,topic,archived,last_activity_after,marked_for_deletion_on,per_page,order_by,sort,search_namespaces,owned,starred,imported,membership,with_issues_enabled,with_merge_requests_enabled,with_programming_language,min_access_level,id_after,id_before,last_activity_before,repository_storage,topic_id,updated_before,updated_after,include_pending_delete,active,wiki_checksum_failed,repository_checksum_failed,include_hidden,simple,statistics,with_custom_attributes",
+        [nameof(ProjectSnippetListOptionsQueryExtensions)] = "per_page",
         [nameof(ReleaseLinkListOptionsQueryExtensions)] = "per_page",
         [nameof(ReviewAppDeletionOptionsQueryExtensions)] = "before,limit,dry_run",
         [nameof(RunnerJobListOptionsQueryExtensions)] = "status,order_by,sort,system_id,per_page",
@@ -77,7 +83,7 @@ public sealed class GeneratedQueryProjectionTests
             "skip_groups,visibility,search,min_access_level,order_by,sort,with_custom_attributes,per_page",
         [nameof(SnippetListOptionsQueryExtensions)] = "created_after,created_before,per_page",
         [nameof(StorageMoveListOptionsQueryExtensions)] = "per_page",
-        [nameof(TagListOptionsQueryExtensions)] = "order_by,sort,search,per_page",
+        [nameof(TagListOptionsQueryExtensions)] = "sort,order_by,search,page_token,page,per_page",
         [nameof(UserActivityListOptionsQueryExtensions)] = "from,per_page",
         [nameof(UserMembershipListOptionsQueryExtensions)] = "type,per_page",
         [nameof(UserPipelineListOptionsQueryExtensions)] =
@@ -143,6 +149,8 @@ public sealed class GeneratedQueryProjectionTests
         [nameof(PipelineScheduleRunListOptionsQueryExtensions)] =
             PipelineScheduleRunListOptionsQueryExtensions.QueryParameterNames,
         [nameof(ProjectListOptionsQueryExtensions)] = ProjectListOptionsQueryExtensions.QueryParameterNames,
+        [nameof(ProjectSnippetListOptionsQueryExtensions)] =
+            ProjectSnippetListOptionsQueryExtensions.QueryParameterNames,
         [nameof(ReleaseLinkListOptionsQueryExtensions)] = ReleaseLinkListOptionsQueryExtensions.QueryParameterNames,
         [nameof(ReviewAppDeletionOptionsQueryExtensions)] =
             ReviewAppDeletionOptionsQueryExtensions.QueryParameterNames,
@@ -216,7 +224,7 @@ public sealed class GeneratedQueryProjectionTests
     [Fact]
     public void TriggerJobListOptions_GeneratesTheWireNames_TheGitLabSpecDeclares()
     {
-        Assert.Equal("scope,per_page", TriggerJobListOptionsQueryExtensions.QueryParameterNames);
+        Assert.Equal("scope,page,per_page", TriggerJobListOptionsQueryExtensions.QueryParameterNames);
     }
 
     [Fact]

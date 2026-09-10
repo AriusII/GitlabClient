@@ -1,5 +1,8 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -45,12 +48,12 @@ public interface IEnvironmentsClient
     ///     Schedules stopped review apps for deletion, which GitLab performs a week later
     ///     (<c>DELETE /projects/:id/environments/review_apps</c>).
     ///     <para>
-    ///         GitLab defaults <see cref="ReviewAppDeletionOptions.DryRun" /> to <c>true</c>, so nothing is
-    ///         scheduled unless it is explicitly set to <c>false</c>. GitLab answers with the scheduled
-    ///         entries - including the dry run's preview - but this method discards that body and
-    ///         completes once the call succeeds, rather than surfacing it as a typed result.
+    ///         GitLab defaults <see cref="ReviewAppDeletionOptions.DryRun" /> to <c>true</c>. The typed result
+    ///         exposes both the dry-run preview and entries GitLab could not schedule, so callers can inspect the
+    ///         effect before opting into <c>dry_run=false</c>.
     ///     </para>
     /// </summary>
-    Task DeleteReviewAppsAsync(ProjectId projectId, ReviewAppDeletionOptions? options = null,
+    Task<GitLabReviewAppDeletionResult> DeleteReviewAppsAsync(ProjectId projectId,
+        ReviewAppDeletionOptions? options = null,
         CancellationToken cancellationToken = default);
 }

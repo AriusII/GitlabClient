@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -43,5 +44,12 @@ public interface IEventsClient
     /// <param name="options">Action, target-type, date-range and sort filters.</param>
     /// <param name="cancellationToken">Cancels the enumeration, per page.</param>
     IAsyncEnumerable<GitLabEvent> ListForUserAsync(long userId, EventListOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Streams one user's contribution events (<c>GET /users/:id/events</c>).</summary>
+    /// <param name="userId">The user's numeric ID or username.</param>
+    /// <param name="options">Action, target-type, date-range and sort filters.</param>
+    /// <param name="cancellationToken">Cancels the enumeration, per page.</param>
+    IAsyncEnumerable<GitLabEvent> ListForUserAsync(string userId, EventListOptions? options = null,
         CancellationToken cancellationToken = default);
 }

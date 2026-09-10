@@ -5,9 +5,11 @@ using System.Text;
 using GitLab.Client.Abstractions;
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
-using GitLab.Client.Infrastructure.Serialization;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 using GitLab.Client.Tests.TestSupport;
+
+using GitLabJsonContext = GitLab.Client.Serialization.GitLabJsonContext;
 
 namespace GitLab.Client.Tests.Infrastructure;
 
@@ -484,10 +486,9 @@ public sealed class GitLabApiConnectionTransportTests
 
         Assert.NotNull(exception.ResponseBody);
         Assert.StartsWith(new string('x', 512), exception.ResponseBody, StringComparison.Ordinal);
-        Assert.Contains("more characters elided", exception.ResponseBody, StringComparison.Ordinal);
+        Assert.Contains("response body truncated", exception.ResponseBody, StringComparison.Ordinal);
         Assert.True(exception.ResponseBody.Length < oversized.Length);
-        Assert.Contains($"[{oversized.Length - (8 * 1024)} more characters elided]", exception.ResponseBody,
-            StringComparison.Ordinal);
+        Assert.True(exception.ResponseBody.Length <= GitLabApiExceptionFactory.MaxRetainedResponseBodyLength);
 
         // The message is built from the retained body, so it must not smuggle the full payload back in.
         Assert.True(exception.Message.Length < oversized.Length);

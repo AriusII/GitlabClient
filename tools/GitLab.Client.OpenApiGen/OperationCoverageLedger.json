@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "specVersion": "19.4",
+  "entries": [
+    {
+      "operationId": "getApiV4ApplicationAppearance",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, GET transport call, and fully literal route are verified from source.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "GetAsync",
+      "routeSegments": [
+        "application",
+        "appearance"
+      ],
+      "methods": [
+        {
+          "clientMethod": "GetAppearanceAsync",
+          "endpointMethod": "GetAppearanceAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "putApiV4ApplicationAppearance",
+      "state": "mapped",
+      "reason": "The public client method, multipart PUT transport, and fully literal route are verified from source; the API operation accepts form fields and optional file uploads.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "PutMultipartFormAsync",
+      "routeSegments": [
+        "application",
+        "appearance"
+      ],
+      "methods": [
+        {
+          "clientMethod": "UpdateAppearanceAsync",
+          "endpointMethod": "UpdateAppearanceAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "getApiV4ApplicationSettings",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, GET transport call, and fully literal route are verified from source.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "GetAsync",
+      "routeSegments": [
+        "application",
+        "settings"
+      ],
+      "methods": [
+        {
+          "clientMethod": "GetSettingsAsync",
+          "endpointMethod": "GetSettingsAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "putApiV4ApplicationSettings",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, PUT transport call, and fully literal route are verified from source.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "PutAsync",
+      "routeSegments": [
+        "application",
+        "settings"
+      ],
+      "methods": [
+        {
+          "clientMethod": "UpdateSettingsAsync",
+          "endpointMethod": "UpdateSettingsAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "getApiV4ApplicationStatistics",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, GET transport call, and fully literal route are verified from source.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "GetAsync",
+      "routeSegments": [
+        "application",
+        "statistics"
+      ],
+      "methods": [
+        {
+          "clientMethod": "GetStatisticsAsync",
+          "endpointMethod": "GetStatisticsAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "getApiV4Metadata",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, GET transport call, and fully literal route are verified from source.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "GetAsync",
+      "routeSegments": [
+        "metadata"
+      ],
+      "methods": [
+        {
+          "clientMethod": "GetMetadataAsync",
+          "endpointMethod": "GetMetadataAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "getApiV4ApplicationPlanLimits",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, GET transport call, and literal route prefix are verified from source. Query options are outside the route identity.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "GetAsync",
+      "routeSegments": [
+        "application",
+        "plan_limits"
+      ],
+      "methods": [
+        {
+          "clientMethod": "GetPlanLimitsAsync",
+          "endpointMethod": "GetPlanLimitsAsync"
+        }
+      ]
+    },
+    {
+      "operationId": "putApiV4ApplicationPlanLimits",
+      "state": "mapped",
+      "reason": "The public client method, endpoint implementation, PUT transport call, and fully literal route are verified from source.",
+      "clientInterface": "IInstanceClient",
+      "endpointType": "InstanceClient",
+      "transportCall": "PutAsync",
+      "routeSegments": [
+        "application",
+        "plan_limits"
+      ],
+      "methods": [
+        {
+          "clientMethod": "UpdatePlanLimitsAsync",
+          "endpointMethod": "UpdatePlanLimitsAsync"
+        }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,13 @@
     <Project Path="samples/GitLab.Client.AotHarness/GitLab.Client.AotHarness.csproj"/>
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/GitLab.Client.Contracts/GitLab.Client.Contracts.csproj"/>
+    <Project Path="src/GitLab.Client.Http/GitLab.Client.Http.csproj"/>
+    <Project Path="src/GitLab.Client.Routing/GitLab.Client.Routing.csproj"/>
     <Project Path="src/GitLab.Client/GitLab.Client.csproj"/>
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/GitLab.Client.OpenApiGen/GitLab.Client.OpenApiGen.csproj"/>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GitLab.Client.Tests/GitLab.Client.Tests.csproj"/>

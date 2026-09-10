@@ -1,5 +1,8 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -34,6 +37,17 @@ public interface ICommitsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Creates a commit from the binary <c>file</c> multipart part declared by GitLab 19.4's OpenAPI schema.
+    ///     The client always sends it under the required <c>file</c> form field, irrespective of
+    ///     <see cref="GitLabFileUpload.FieldName" />.
+    /// </summary>
+    /// <param name="projectId">The project the commit belongs to.</param>
+    /// <param name="file">The binary commit content.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<GitLabCommit> CreateAsync(ProjectId projectId, GitLabFileUpload file,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Cherry-picks a commit onto another branch
     ///     (<c>POST /projects/:id/repository/commits/:sha/cherry_pick</c>). <paramref name="sha" /> may
     ///     also be a branch or tag name and is URL-encoded for you.
@@ -42,10 +56,26 @@ public interface ICommitsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Cherry-picks a commit and returns either the created commit or GitLab's successful dry-run result.
+    ///     Use this overload when <see cref="CherryPickCommitRequest.DryRun" /> can be <see langword="true" />:
+    ///     GitLab returns <c>{ "dry_run": "success" }</c>, not a commit, in that case.
+    /// </summary>
+    Task<GitLabCommitOperationResult> CherryPickWithResultAsync(ProjectId projectId, string sha,
+        CherryPickCommitRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Reverts a commit on a branch (<c>POST /projects/:id/repository/commits/:sha/revert</c>).
     /// </summary>
     Task<GitLabCommit> RevertAsync(ProjectId projectId, string sha, RevertCommitRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Reverts a commit and returns either the created revert commit or GitLab's successful dry-run result.
+    ///     Use this overload when <see cref="RevertCommitRequest.DryRun" /> can be <see langword="true" />:
+    ///     GitLab returns <c>{ "dry_run": "success" }</c>, not a commit, in that case.
+    /// </summary>
+    Task<GitLabCommitOperationResult> RevertWithResultAsync(ProjectId projectId, string sha,
+        RevertCommitRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Streams a commit's comments (<c>GET /projects/:id/repository/commits/:sha/comments</c>).

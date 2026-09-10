@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -21,8 +23,16 @@ namespace GitLab.Client.Abstractions;
 /// </summary>
 public interface IMembersClient
 {
-    /// <summary>Streams the project's direct members. Inherited members are not included.</summary>
+    /// <summary>
+    ///     Streams the project's direct members. Inherited members are not included. Use the overload
+    ///     taking <see cref="ProjectMemberListOptions" /> to search, restrict IDs,
+    ///     omit IDs, or request seat/SAML data.
+    /// </summary>
     IAsyncEnumerable<GitLabMember> ListAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    /// <summary>Streams direct project members using the supplied GitLab query filters.</summary>
+    IAsyncEnumerable<GitLabMember> ListAsync(ProjectId projectId, ProjectMemberListOptions? options,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Reads one direct project member. Throws <c>GitLabNotFoundException</c> when the membership is inherited.</summary>
     Task<GitLabMember> GetAsync(ProjectId projectId, long userId, CancellationToken cancellationToken = default);
@@ -39,8 +49,17 @@ public interface IMembersClient
     Task<GitLabMember> UpdateAsync(ProjectId projectId, long userId, UpdateMemberRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Removes a direct member from a project.</summary>
+    /// <summary>
+    ///     Removes a direct member from a project, using GitLab's default cascading behaviour.
+    /// </summary>
     Task RemoveAsync(ProjectId projectId, long userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Removes a direct member from a project. <paramref name="options" /> controls whether GitLab
+    ///     also removes descendant memberships and unassigns the member from project issuables.
+    /// </summary>
+    Task RemoveAsync(ProjectId projectId, long userId, RemoveProjectMemberOptions? options,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Streams every member of a project the caller may see, including those inherited from ancestor

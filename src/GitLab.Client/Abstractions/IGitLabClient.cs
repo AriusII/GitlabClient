@@ -1,17 +1,16 @@
 ﻿namespace GitLab.Client.Abstractions;
 
 /// <summary>
-///     Root aggregate exposing every GitLab REST API resource area as a typed client. This interface is
-///     the library's table of contents and its public NuGet contract, so it stays hand-written: a
-///     resource appearing on or vanishing from the public surface must show up in a reviewable diff.
+///     Root aggregate exposing GitLab REST v4 resource areas and the GraphQL document façade as typed clients.
+///     This interface is the library's table of contents and its public NuGet contract, so it stays hand-written: a
+///     client appearing on or vanishing from the public surface must show up in a reviewable diff.
 ///     <para>
-///         Its implementation is generated (<c>GitLabClientWiringGenerator</c>) from the
-///         <c>[GenerateClientLayers]</c> attribute on each <c>I&lt;Resource&gt;Repository</c>, as
-///         explicit interface implementations. That makes the compiler enforce the pairing in both
-///         directions: a property declared here with no attributed repository behind it is CS0535, and an
-///         attributed repository with no property here is CS0539 naming the exact member. Adding a
-///         resource therefore means adding one line to this file - and nothing to
-///         <c>ServiceCollectionExtensions</c> or the root client.
+///         Its implementation is generated (<c>GitLabClientWiringGenerator</c>) directly from these
+///         properties, as explicit interface implementations. The generator resolves each
+///         <c>I&lt;Resource&gt;Client</c> to its paired endpoint client and reports a build error if the
+///         concrete endpoint is missing or does not implement the declared abstraction. Adding a resource
+///         therefore means adding one line to this file and one endpoint client - nothing to
+///         <c>ServiceCollectionExtensions</c> or a forwarding layer.
 ///     </para>
 ///     <para>
 ///         Every resource client is also independently injectable by its own interface, so code that
@@ -20,6 +19,24 @@
 /// </summary>
 public interface IGitLabClient
 {
+    /// <summary>
+    ///     Bounded, client-side orchestration of independent typed REST and GraphQL operations. This is not a
+    ///     synthetic GitLab REST batch endpoint; see <see cref="IBatchesClient" />.
+    /// </summary>
+    IBatchesClient Batches { get; }
+
+    /// <summary>
+    ///     GitLab GraphQL documents (<c>POST /api/graphql</c>). This is separate from REST v4 and is the
+    ///     supported API surface for modern Work Items.
+    /// </summary>
+    IGraphQLClient GraphQL { get; }
+
+    /// <summary>
+    ///     Pure local composition of REST and GraphQL DTOs already obtained by the caller. This area never initiates
+    ///     an HTTP request; see <see cref="IMappersClient" />.
+    /// </summary>
+    IMappersClient Mappers { get; }
+
     /// <summary>Projects (<c>/projects</c>).</summary>
     IProjectsClient Projects { get; }
 
@@ -729,8 +746,30 @@ public interface IGitLabClient
     /// <summary>
     ///     Cluster agents (<c>/projects/:id/cluster_agents</c>) - registrations for the GitLab agent for
     ///     Kubernetes, their authentication tokens, and receptive agents' URL configurations. Distinct
-    ///     from the deprecated, certificate-based Kubernetes cluster integration, which this library does
-    ///     not implement.
+    ///     from the deprecated, certificate-based Kubernetes cluster integration exposed through
+    ///     <see cref="Clusters" />.
     /// </summary>
     IClusterAgentsClient ClusterAgents { get; }
+
+    /// <summary>
+    ///     Deprecated certificate-based Kubernetes cluster associations at the instance, group, and
+    ///     project scope (<c>/admin/clusters</c>, <c>/groups/:id/clusters</c>,
+    ///     <c>/projects/:id/clusters</c>). Prefer <see cref="ClusterAgents" /> for new integrations.
+    /// </summary>
+    IClustersClient Clusters { get; }
+
+    /// <summary>Pipeline bridge jobs (<c>/projects/:id/pipelines/:pipeline_id/bridges</c>).</summary>
+    IBridgesClient Bridges { get; }
+
+    /// <summary>
+    ///     Legacy epics, their child epics, issues, boards and relations
+    ///     (<c>/groups/:id/epics</c>). GitLab exposes no REST Work Items resource in the pinned specification.
+    /// </summary>
+    IEpicsClient Epics { get; }
+
+    /// <summary>LDAP directory groups and group links (<c>/ldap</c>, <c>/groups/:id/ldap_group_links</c>).</summary>
+    ILdapClient Ldap { get; }
+
+    /// <summary>Security vulnerabilities, findings, issue links and exports (<c>/vulnerabilities</c>).</summary>
+    IVulnerabilitiesClient Vulnerabilities { get; }
 }

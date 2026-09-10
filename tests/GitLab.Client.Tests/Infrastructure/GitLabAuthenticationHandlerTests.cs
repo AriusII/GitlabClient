@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 
-using GitLab.Client.DependencyInjection;
+using GitLab.Client.Configuration;
 using GitLab.Client.Infrastructure.RateLimiting;
 using GitLab.Client.Tests.TestSupport;
 

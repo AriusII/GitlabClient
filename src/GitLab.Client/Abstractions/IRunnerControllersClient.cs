@@ -1,4 +1,5 @@
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -41,9 +42,14 @@ public interface IRunnerControllersClient
     Task DeleteAsync(long runnerControllerId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Lists a controller's scopes, streaming every page. A
-    ///     <see cref="GitLabRunnerControllerScope.RunnerId" /> of <see langword="null" /> is the
-    ///     instance-wide scope.
+    ///     Gets a controller's scopes grouped as GitLab returns them.
+    /// </summary>
+    Task<GitLabRunnerControllerScopes> GetScopesAsync(long runnerControllerId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Enumerates a controller's scopes in the stable order instance-wide then runner-level. This is a
+    ///     compatibility projection over <see cref="GetScopesAsync" /> rather than a paginated API response.
     /// </summary>
     IAsyncEnumerable<GitLabRunnerControllerScope> ListScopesAsync(long runnerControllerId,
         CancellationToken cancellationToken = default);
@@ -78,10 +84,10 @@ public interface IRunnerControllersClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Creates a token for a controller. GitLab answers with the token's metadata and <em>not</em> its
-    ///     secret; call <see cref="RotateTokenAsync" /> to obtain a usable value.
+    ///     Creates a token for a controller and returns its secret exactly once. Persist the secret immediately and
+    ///     do not write it to a log or exception message.
     /// </summary>
-    Task<GitLabRunnerControllerToken> CreateTokenAsync(long runnerControllerId,
+    Task<GitLabRunnerControllerTokenWithSecret> CreateTokenAsync(long runnerControllerId,
         CreateRunnerControllerTokenRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Retrieves one token's metadata. The secret is never returned here.</summary>
@@ -94,7 +100,7 @@ public interface IRunnerControllersClient
     /// <summary>
     ///     Rotates a token, invalidating the old secret and minting a new one.
     ///     <para>
-    ///         This is the only call that returns a usable secret, and it returns it exactly once - see
+    ///         Like token creation, rotation returns a usable secret exactly once - see
     ///         <see cref="GitLabRunnerControllerTokenWithSecret.Token" />. Persist it immediately, and keep it
     ///         out of logs.
     ///     </para>

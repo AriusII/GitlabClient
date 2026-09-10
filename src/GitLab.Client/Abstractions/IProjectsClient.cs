@@ -1,5 +1,8 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Models.Responses;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -81,8 +84,9 @@ public interface IProjectsClient
         ProjectStarrerListOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Forks the project (<c>POST /projects/:id/fork</c>). A null <paramref name="request" /> forks
-    ///     into the authenticated user's own namespace under the source project's name and path.
+    ///     Forks the project (<c>POST /projects/:id/fork</c>). A null <paramref name="request" /> sends no
+    ///     body and forks into the authenticated user's own namespace under the source project's name and
+    ///     path.
     /// </summary>
     Task<GitLabProject> ForkAsync(ProjectId projectId, ForkProjectRequest? request = null,
         CancellationToken cancellationToken = default);
@@ -186,8 +190,8 @@ public interface IProjectsClient
 
     /// <summary>
     ///     Triggers a Git housekeeping run on the project's repository
-    ///     (<c>POST /projects/:id/housekeeping</c>). A null <paramref name="request" /> leaves the task
-    ///     unset, so GitLab picks whichever task the project is due for.
+    ///     (<c>POST /projects/:id/housekeeping</c>). A null <paramref name="request" /> sends no body, so
+    ///     GitLab picks whichever task the project is due for.
     /// </summary>
     Task StartHousekeepingAsync(ProjectId projectId, ProjectHousekeepingRequest? request = null,
         CancellationToken cancellationToken = default);

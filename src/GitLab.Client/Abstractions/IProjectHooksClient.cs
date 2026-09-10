@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -16,6 +18,14 @@ public interface IProjectHooksClient
 {
     /// <summary>Streams every webhook configured on a project.</summary>
     IAsyncEnumerable<GitLabProjectHook> ListAsync(ProjectId projectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every webhook configured on a project, starting at and sizing pages according to
+    ///     <paramref name="options" />. The stream follows GitLab's pagination links after the requested
+    ///     starting page.
+    /// </summary>
+    IAsyncEnumerable<GitLabProjectHook> ListAsync(ProjectId projectId, ProjectHookListOptions? options,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Gets one webhook by id.</summary>
     Task<GitLabProjectHook> GetAsync(ProjectId projectId, long hookId, CancellationToken cancellationToken = default);

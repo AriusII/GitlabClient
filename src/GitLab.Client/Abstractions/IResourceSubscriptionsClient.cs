@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Responses;
 
 namespace GitLab.Client.Abstractions;
 
@@ -67,16 +68,16 @@ public interface IResourceSubscriptionsClient
 
     /// <summary>
     ///     Subscribes the authenticated user to a group label
-    ///     (<c>POST /groups/:id/labels/:label_id/subscribe</c>). Group labels carry no <c>Priority</c>, so
-    ///     that member stays null here.
+    ///     (<c>POST /groups/:id/labels/:label_id/subscribe</c>). The response uses the distinct group-label
+    ///     contract, which deliberately has no project-only <c>Priority</c> or <c>IsProjectLabel</c> member.
     /// </summary>
-    Task<GitLabLabel> SubscribeToGroupLabelAsync(GroupId groupId, string labelIdOrName,
+    Task<GitLabGroupLabel> SubscribeToGroupLabelAsync(GroupId groupId, string labelIdOrName,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Unsubscribes the authenticated user from a group label
     ///     (<c>POST /groups/:id/labels/:label_id/unsubscribe</c>).
     /// </summary>
-    Task<GitLabLabel> UnsubscribeFromGroupLabelAsync(GroupId groupId, string labelIdOrName,
+    Task<GitLabGroupLabel> UnsubscribeFromGroupLabelAsync(GroupId groupId, string labelIdOrName,
         CancellationToken cancellationToken = default);
 }

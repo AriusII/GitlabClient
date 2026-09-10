@@ -1,4 +1,6 @@
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -18,9 +20,8 @@ public interface IInstanceClient
     ///     Updates the text and boolean fields of the instance's branding (<c>PUT /application/appearance</c>),
     ///     leaving unmentioned fields unchanged.
     ///     <para>
-    ///         GitLab documents this endpoint as accepting either a plain JSON body for these fields or a
-    ///         <c>multipart/form-data</c> body carrying one of its four image fields; the two are never
-    ///         combined in GitLab's own examples. This method sends the JSON form. To replace one of the
+    ///         GitLab declares this endpoint as <c>multipart/form-data</c>. This method sends the typed
+    ///         text and boolean fields in that form. To replace one of the
     ///         instance's images, use <see cref="SetAppearanceLogoAsync" />, <see cref="SetAppearanceHeaderLogoAsync" />,
     ///         <see cref="SetAppearancePwaIconAsync" /> or <see cref="SetAppearanceFaviconAsync" /> instead - each
     ///         issues its own call to the same route, since a single <c>multipart/form-data</c> request can

@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -14,11 +15,9 @@ namespace GitLab.Client.Abstractions;
 ///         deleted without going through the flat Notes API.
 ///     </para>
 ///     <para>
-///         Two asymmetries are GitLab's, not this wrapper's: commits and snippets have no thread-level
-///         resolve endpoint, so there is deliberately no <c>ResolveForCommitAsync</c> or
-///         <c>ResolveForSnippetAsync</c>; and note-level resolution exists only for merge requests, where
-///         diff notes are resolvable, hence a single
-///         <see cref="ResolveNoteInMergeRequestDiscussionAsync" />.
+///         Commits and snippets have no thread-level resolve endpoint, so there is deliberately no
+///         <c>ResolveForCommitAsync</c> or <c>ResolveForSnippetAsync</c>. Every noteable's note-level update
+///         endpoint accepts <c>resolved</c>; GitLab can still reject an individual note that is not resolvable.
 ///     </para>
 /// </summary>
 public interface IDiscussionsClient
@@ -57,6 +56,10 @@ public interface IDiscussionsClient
     /// <summary>Rewrites the body of a note inside an issue discussion.</summary>
     Task<GitLabNote> UpdateNoteInIssueDiscussionAsync(ProjectId projectId, long issueIid, string discussionId,
         long noteId, UpdateDiscussionNoteRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks a note inside an issue discussion resolved or unresolved.</summary>
+    Task<GitLabNote> ResolveNoteInIssueDiscussionAsync(ProjectId projectId, long issueIid, string discussionId,
+        long noteId, ResolveDiscussionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a single note from an issue discussion.</summary>
     Task DeleteNoteFromIssueDiscussionAsync(ProjectId projectId, long issueIid, string discussionId, long noteId,
@@ -105,12 +108,7 @@ public interface IDiscussionsClient
         string discussionId, long noteId, UpdateDiscussionNoteRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    ///     Resolves or unresolves a single note inside a merge request discussion. Shares GitLab's
-    ///     <c>PUT .../notes/:note_id</c> route with
-    ///     <see cref="UpdateNoteInMergeRequestDiscussionAsync" />, which sends the mutually exclusive
-    ///     <c>body</c> instead. Only resolvable (diff) notes qualify; GitLab answers 403 for the rest.
-    /// </summary>
+    /// <summary>Marks a note inside a merge request discussion resolved or unresolved.</summary>
     Task<GitLabNote> ResolveNoteInMergeRequestDiscussionAsync(ProjectId projectId, long mergeRequestIid,
         string discussionId, long noteId, ResolveDiscussionRequest request,
         CancellationToken cancellationToken = default);
@@ -157,6 +155,10 @@ public interface IDiscussionsClient
     Task<GitLabNote> UpdateNoteInCommitDiscussionAsync(ProjectId projectId, string sha, string discussionId,
         long noteId, UpdateDiscussionNoteRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Marks a note inside a commit discussion resolved or unresolved.</summary>
+    Task<GitLabNote> ResolveNoteInCommitDiscussionAsync(ProjectId projectId, string sha, string discussionId,
+        long noteId, ResolveDiscussionRequest request, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes a single note from a commit discussion.</summary>
     Task DeleteNoteFromCommitDiscussionAsync(ProjectId projectId, string sha, string discussionId, long noteId,
         CancellationToken cancellationToken = default);
@@ -195,6 +197,10 @@ public interface IDiscussionsClient
     /// <summary>Rewrites the body of a note inside a snippet discussion.</summary>
     Task<GitLabNote> UpdateNoteInSnippetDiscussionAsync(ProjectId projectId, long snippetId, string discussionId,
         long noteId, UpdateDiscussionNoteRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks a note inside a snippet discussion resolved or unresolved.</summary>
+    Task<GitLabNote> ResolveNoteInSnippetDiscussionAsync(ProjectId projectId, long snippetId, string discussionId,
+        long noteId, ResolveDiscussionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a single note from a snippet discussion.</summary>
     Task DeleteNoteFromSnippetDiscussionAsync(ProjectId projectId, long snippetId, string discussionId, long noteId,
@@ -238,6 +244,10 @@ public interface IDiscussionsClient
     /// <summary>Rewrites the body of a note inside an epic discussion.</summary>
     Task<GitLabNote> UpdateNoteInEpicDiscussionAsync(GroupId groupId, long epicIid, string discussionId, long noteId,
         UpdateDiscussionNoteRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks a note inside an epic discussion resolved or unresolved.</summary>
+    Task<GitLabNote> ResolveNoteInEpicDiscussionAsync(GroupId groupId, long epicIid, string discussionId, long noteId,
+        ResolveDiscussionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a single note from an epic discussion.</summary>
     Task DeleteNoteFromEpicDiscussionAsync(GroupId groupId, long epicIid, string discussionId, long noteId,

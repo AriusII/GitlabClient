@@ -1,5 +1,6 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -19,8 +20,15 @@ namespace GitLab.Client.Abstractions;
 /// </summary>
 public interface ICustomAttributesClient
 {
-    /// <summary>Streams every custom attribute set on a user.</summary>
+    /// <summary>Streams every custom attribute set on a user identified by numeric ID.</summary>
     IAsyncEnumerable<GitLabCustomAttribute> ListForUserAsync(long userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every custom attribute set on a user identified by the string form GitLab accepts
+    ///     (<c>GET /users/:id/custom_attributes</c>). Pass the raw value; it is encoded as one route segment.
+    /// </summary>
+    IAsyncEnumerable<GitLabCustomAttribute> ListForUserAsync(string userIdOrUsername,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -30,6 +38,10 @@ public interface ICustomAttributesClient
     Task<GitLabCustomAttribute> GetForUserAsync(long userId, string key,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Gets one custom attribute for a user identified by GitLab's string <c>:id</c> form.</summary>
+    Task<GitLabCustomAttribute> GetForUserAsync(string userIdOrUsername, string key,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     ///     Creates or overwrites one of a user's custom attributes. An upsert - GitLab answers <c>200</c>
     ///     whether the key was new or not.
@@ -37,8 +49,17 @@ public interface ICustomAttributesClient
     Task<GitLabCustomAttribute> SetForUserAsync(long userId, string key, SetCustomAttributeRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Creates or overwrites one custom attribute for a user identified by GitLab's string <c>:id</c> form.
+    /// </summary>
+    Task<GitLabCustomAttribute> SetForUserAsync(string userIdOrUsername, string key,
+        SetCustomAttributeRequest request, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes one of a user's custom attributes.</summary>
     Task DeleteForUserAsync(long userId, string key, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes one custom attribute for a user identified by GitLab's string <c>:id</c> form.</summary>
+    Task DeleteForUserAsync(string userIdOrUsername, string key, CancellationToken cancellationToken = default);
 
     /// <summary>Streams every custom attribute set on a group.</summary>
     IAsyncEnumerable<GitLabCustomAttribute> ListForGroupAsync(GroupId groupId,

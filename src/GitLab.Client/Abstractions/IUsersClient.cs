@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -20,6 +22,16 @@ public interface IUsersClient
     Task<GitLabUser> GetAsync(long userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Retrieves a single user with selected optional projections (<c>GET /users/:id</c>).
+    /// </summary>
+    /// <remarks>
+    ///     Use <see cref="UserGetOptions.WithCustomAttributes" /> only when the caller consumes them:
+    ///     they expand every response and are visible to administrators only.
+    /// </remarks>
+    Task<GitLabUser> GetAsync(long userId, UserGetOptions options,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Streams every user visible to the caller (<c>GET /users</c>), following GitLab's pagination.
     ///     Several filters on <paramref name="options" /> are honoured for administrators only.
     /// </summary>
@@ -37,6 +49,8 @@ public interface IUsersClient
 
     /// <summary>
     ///     Creates a user (<c>POST /users</c>). Administrators only.
+    ///     The fields are sent as <c>multipart/form-data</c>; use the avatar overload when the account
+    ///     should be created with an image.
     /// </summary>
     /// <param name="request">
     ///     The new account. It carries credentials-adjacent fields - never log it, and prefer
@@ -50,10 +64,27 @@ public interface IUsersClient
     Task<GitLabUser> CreateAsync(CreateUserRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Creates a user with an avatar (<c>POST /users</c> as <c>multipart/form-data</c>, field
+    ///     <c>avatar</c>). The stream is read but not disposed, and its caller-provided field name is
+    ///     intentionally replaced with GitLab's required <c>avatar</c> name.
+    /// </summary>
+    Task<GitLabUser> CreateAsync(CreateUserRequest request, GitLabFileUpload avatar,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Updates a user (<c>PUT /users/:id</c>). Administrators only. Unset members of
-    ///     <paramref name="request" /> are omitted, so this is a partial update despite the verb.
+    ///     <paramref name="request" /> are omitted, so this is a partial update despite the verb. Fields
+    ///     are sent as <c>multipart/form-data</c>; use the avatar overload to change the image as well.
     /// </summary>
     Task<GitLabUser> UpdateAsync(long userId, UpdateUserRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Updates a user and avatar (<c>PUT /users/:id</c> as <c>multipart/form-data</c>, field
+    ///     <c>avatar</c>). The stream is read but not disposed, and its caller-provided field name is
+    ///     intentionally replaced with GitLab's required <c>avatar</c> name.
+    /// </summary>
+    Task<GitLabUser> UpdateAsync(long userId, UpdateUserRequest request, GitLabFileUpload avatar,
         CancellationToken cancellationToken = default);
 
     /// <summary>

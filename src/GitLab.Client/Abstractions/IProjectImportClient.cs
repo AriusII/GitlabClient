@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -10,10 +12,10 @@ namespace GitLab.Client.Abstractions;
 ///     file templates a project exposes (<c>/projects/:id/templates/:type</c>).
 ///     <para>
 ///         Export and import are both asynchronous on the server: the schedule call returns immediately
-///         and the work happens in the background. Poll <see cref="GetExportStatusAsync" /> until it reports
-///         <see cref="GitLabProjectExportState.Finished" /> before calling
-///         <see cref="DownloadExportAsync" />, and poll <see cref="GetImportStatusAsync" /> after any of the
-///         import calls.
+///         and the work happens in the background. Poll <see cref="GetExportStatusAsync" /> before calling
+///         <see cref="DownloadExportAsync" />: <see cref="GitLabProjectExportState.Finished" /> marks a newly
+///         completed archive, while <see cref="GitLabProjectExportState.RegenerationInProgress" /> retains the
+///         preceding archive. Poll <see cref="GetImportStatusAsync" /> after any of the import calls.
 ///     </para>
 ///     <para>
 ///         SECURITY: the request records for the external-forge imports carry credentials for the source
@@ -38,8 +40,8 @@ public interface IProjectImportClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Gets the state of the most recent export of a project (<c>GET /projects/:id/export</c>). Only
-    ///     <see cref="GitLabProjectExportState.Finished" /> means the archive can be downloaded.
+    ///     Gets the state of the most recent export of a project (<c>GET /projects/:id/export</c>). A finished
+    ///     archive remains downloadable while GitLab regenerates it.
     /// </summary>
     Task<GitLabProjectExportStatus> GetExportStatusAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
@@ -125,11 +127,10 @@ public interface IProjectImportClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Gets the state of the most recent single-relation import into a project
-    ///     (<c>GET /projects/:id/relation-imports</c>). Only one relation import can be in flight at a time,
-    ///     so this reports whether the previous <see cref="ImportRelationAsync" /> finished.
+    ///     Gets the relation-import trackers for a project (<c>GET /projects/:id/relation-imports</c>). GitLab
+    ///     returns an array, even though only one relation import can be in flight at a time.
     /// </summary>
-    Task<GitLabProjectImportStatus> GetRelationImportStatusAsync(ProjectId projectId,
+    Task<IReadOnlyList<GitLabProjectRelationImport>> GetRelationImportStatusAsync(ProjectId projectId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

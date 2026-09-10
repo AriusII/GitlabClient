@@ -3,9 +3,10 @@ using System.Text;
 
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
-using GitLab.Client.Infrastructure.Serialization;
 using GitLab.Client.Models;
 using GitLab.Client.Tests.TestSupport;
+
+using GitLabJsonContext = GitLab.Client.Serialization.GitLabJsonContext;
 
 namespace GitLab.Client.Tests.Infrastructure;
 
@@ -80,6 +81,74 @@ public sealed class GitLabApiConnectionTests
         Assert.Contains("evil.example", exception.Message, StringComparison.Ordinal);
         Assert.Single(handler.Requests);
         Assert.Single(projects);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_RefusesToFollowANetworkPathReferencePointingAtAnotherHost()
+    {
+        // "//host/path" is not Uri.IsAbsoluteUri, but HttpClient resolves it as a cross-host HTTPS URL.
+        // Treating it as merely relative would send the configured token to the attacker-controlled host.
+        using RecordingHttpMessageHandler handler = new(static (_, index) => index switch
+        {
+            0 => Page(1, "<//evil.example/api/v4/projects?page=2>; rel=\"next\""),
+            _ => Page(2, null)
+        });
+
+        using HttpClient httpClient = new(handler) { BaseAddress = GitLabBaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        GitLabApiException exception = await Assert.ThrowsAsync<GitLabApiException>(async () =>
+        {
+            await foreach (GitLabProject _ in connection.GetPagedAsync(ProjectsRoute,
+                                   GitLabJsonContext.Default.GitLabProjectArray,
+                                   TestContext.Current.CancellationToken)
+                               .ConfigureAwait(false))
+            {
+            }
+        });
+
+        Assert.Contains("evil.example", exception.Message, StringComparison.Ordinal);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task GetAsync_BoundsTheRetainedErrorBodyBeforeCreatingTheException()
+    {
+        string proxyErrorPage = new('x', GitLabApiExceptionFactory.MaxRetainedResponseBodyLength * 2);
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.BadGateway)
+        {
+            Content = new StringContent(proxyErrorPage, Encoding.UTF8, "text/html")
+        });
+        using HttpClient httpClient = new(handler) { BaseAddress = GitLabBaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        GitLabServerException exception = await Assert.ThrowsAsync<GitLabServerException>(() =>
+            connection.GetAsync(new Uri("projects/1", UriKind.Relative), GitLabJsonContext.Default.GitLabProject,
+                TestContext.Current.CancellationToken));
+
+        Assert.NotNull(exception.ResponseBody);
+        Assert.True(exception.ResponseBody.Length <= GitLabApiExceptionFactory.MaxRetainedResponseBodyLength);
+        Assert.Contains("response body truncated", exception.ResponseBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetAsync_ReadsOnlyABoundedPrefixOfALargeErrorBody()
+    {
+        byte[] payload =
+            Encoding.UTF8.GetBytes(new string('x', GitLabApiExceptionFactory.MaxRetainedResponseBodyLength * 128));
+        using CountingReadStream source = new(payload);
+        using StubHttpMessageHandler handler = new(_ =>
+            new HttpResponseMessage(HttpStatusCode.BadGateway) { Content = new StreamContent(source) });
+        using HttpClient httpClient = new(handler) { BaseAddress = GitLabBaseAddress };
+        GitLabApiConnection connection = new(httpClient);
+
+        await Assert.ThrowsAsync<GitLabServerException>(() =>
+            connection.GetAsync(new Uri("projects/1", UriKind.Relative), GitLabJsonContext.Default.GitLabProject,
+                TestContext.Current.CancellationToken));
+
+        // HttpContent/StreamReader can prefetch a buffer, but a proxy error page must never be read in its
+        // entirety. The payload is deliberately 128 times larger than the retained diagnostic prefix.
+        Assert.InRange(source.BytesRead, 1, GitLabApiExceptionFactory.MaxRetainedResponseBodyLength * 2);
     }
 
     [Fact]
@@ -215,6 +284,26 @@ public sealed class GitLabApiConnectionTests
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class CountingReadStream(byte[] content) : MemoryStream(content, false)
+    {
+        public int BytesRead { get; private set; }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int read = base.Read(buffer, offset, count);
+            BytesRead += read;
+            return read;
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            int read = await base.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            BytesRead += read;
+            return read;
         }
     }
 }

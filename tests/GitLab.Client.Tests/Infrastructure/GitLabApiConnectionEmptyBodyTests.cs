@@ -4,9 +4,11 @@ using System.Text;
 using GitLab.Client.Abstractions;
 using GitLab.Client.Abstractions.Exceptions;
 using GitLab.Client.Infrastructure.Http;
-using GitLab.Client.Infrastructure.Serialization;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 using GitLab.Client.Tests.TestSupport;
+
+using GitLabJsonContext = GitLab.Client.Serialization.GitLabJsonContext;
 
 namespace GitLab.Client.Tests.Infrastructure;
 

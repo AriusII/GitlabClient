@@ -11,8 +11,12 @@ concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -33,12 +37,23 @@ jobs:
       - name: Build (Release, 0 warnings)
         run: dotnet build GitlabClient.slnx -c Release --no-restore
 
+      - name: Verify pinned OpenAPI inventory
+        run: dotnet run --project tools/GitLab.Client.OpenApiGen/GitLab.Client.OpenApiGen.csproj -c Release --no-build -- --verify
+
       - name: Test
-        run: dotnet test GitlabClient.slnx -c Release --no-build
+        run: dotnet test --solution GitlabClient.slnx -c Release --no-build --no-restore
+
+      - name: Pack the sole distributable package
+        run: dotnet pack src/GitLab.Client/GitLab.Client.csproj -c Release --no-build --no-restore --output ./artifacts
+
+      - name: Verify the NuGet package layout
+        shell: pwsh
+        run: ./.github/scripts/Verify-NuGetPackage.ps1 -ArtifactsDirectory ./artifacts
 
   aot-verify:
     needs: build-and-test
     runs-on: windows-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -48,11 +63,23 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore AOT harness
+        run: dotnet restore samples/GitLab.Client.AotHarness/GitLab.Client.AotHarness.csproj
+
       - name: Add vswhere to PATH
-        # Native linking (link.exe) needs vswhere.exe discoverable on PATH, otherwise the AOT
-        # publish below fails with MSB3073 instead of producing the native exe. See CLAUDE.md.
+        # Native linking on the hosted Windows image discovers the MSVC toolchain through vswhere.
+        # Make the checked image location explicit and fail with a useful error if it changes.
         shell: pwsh
-        run: echo 'C:\Program Files (x86)\Microsoft Visual Studio\Installer' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        run: |
+          $vswhereDirectory = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
+          $vswhere = Join-Path $vswhereDirectory 'vswhere.exe'
+          if (-not (Test-Path -LiteralPath $vswhere -PathType Leaf)) {
+            throw "vswhere.exe was not found at '$vswhere'."
+          }
+
+          $vswhereDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Publish AOT harness (win-x64)
-        run: dotnet publish samples/GitLab.Client.AotHarness -c Release -r win-x64
+        # Publishing proves the native link path and trim/AOT analysis. This job does not execute
+        # the harness, so CI never performs its live GitLab API call.
+        run: dotnet publish samples/GitLab.Client.AotHarness/GitLab.Client.AotHarness.csproj -c Release -r win-x64 --no-restore

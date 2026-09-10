@@ -5,14 +5,16 @@
     <RootNamespace>GitLab.Client.Tests</RootNamespace>
     <OutputType>Exe</OutputType>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <!-- Makes `dotnet test` fall back to the MTP MSBuild bridge if a host has not yet
+         selected .NET 10's native MTP mode. It is inert when global.json selects MTP. -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="xunit.v3"/>
-    <!-- VSTest/IDE Test Explorer compatibility alongside MTP; see Directory.Packages.props. -->
-    <PackageReference Include="xunit.runner.visualstudio"/>
-    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <!-- Drives both source generators directly through CSharpGeneratorDriver, so generator diagnostics
+    <!-- xunit.v3 carries the MTP runner and its MSBuild integration. Do not add the legacy
+         VSTest adapter/Test.Sdk side-by-side: .NET 10 selects MTP from global.json. -->
+    <!-- Drives source generators directly through CSharpGeneratorDriver, so generator diagnostics
          and incrementality can be asserted on - neither is observable from the generated output alone. -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
     <!-- ConfigurationBuilder + AddInMemoryCollection, for AddGitLabClient(IConfiguration) tests.
@@ -27,6 +29,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GitLab.Client\GitLab.Client.csproj"/>
+    <!-- The production NuGet package places these implementation assemblies in the same lib group.
+         Tests compile against them explicitly so PrivateAssets on the façade's internal project references
+         does not hide their contract and InternalsVisibleTo surfaces during a source build. -->
+    <ProjectReference Include="..\..\src\GitLab.Client.Contracts\GitLab.Client.Contracts.csproj"/>
+    <ProjectReference Include="..\..\src\GitLab.Client.Routing\GitLab.Client.Routing.csproj"/>
+    <ProjectReference Include="..\..\src\GitLab.Client.Http\GitLab.Client.Http.csproj"/>
     <!-- A NORMAL reference, unlike GitLab.Client's OutputItemType="Analyzer"
          ReferenceOutputAssembly="false" one: the tests need the generator types as a library. -->
     <ProjectReference Include="..\..\generators\GitLab.Client.SourceGenerators\GitLab.Client.SourceGenerators.csproj"/>

@@ -1,4 +1,5 @@
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 
@@ -15,8 +16,8 @@ public interface IOrganizationsClient
     ///         GitLab documents this endpoint as <c>multipart/form-data</c> so the optional avatar can ride
     ///         along with it - there is no separate avatar route the way there is for groups and projects.
     ///         Pass <paramref name="avatar" /> to attach one; the stream is read but not disposed. Leaving
-    ///         it null - the common case - sends <paramref name="request" /> as a plain JSON body instead,
-    ///         since there is then no file part to include.
+    ///         it null - the common case - still sends the typed request as <c>multipart/form-data</c>,
+    ///         because that is the media type declared by the route.
     ///     </para>
     /// </summary>
     Task<GitLabOrganization> CreateAsync(CreateOrganizationRequest request, GitLabFileUpload? avatar = null,

@@ -1,5 +1,7 @@
 using GitLab.Client.Domain;
 using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
+using GitLab.Client.Query;
 
 namespace GitLab.Client.Abstractions;
 
@@ -40,16 +42,44 @@ public interface IDeployKeysClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Creates a deploy key directly on the GitLab instance from the legacy project-shaped request. Its
+    ///     project-only push permission is discarded before the request is sent. Prefer
+    ///     <see cref="CreateForInstanceAsync" /> for new code.
+    /// </summary>
+    Task<GitLabDeployKey> CreateAsync(CreateDeployKeyRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Creates a deploy key directly on the GitLab instance (<c>POST /deploy_keys</c>), rather than on a
     ///     project. Requires administrator access. Unlike <see cref="AddAsync" />, the created key is not
     ///     attached to any project until <see cref="EnableAsync" /> grants one access to it.
     /// </summary>
-    Task<GitLabDeployKey> CreateAsync(CreateDeployKeyRequest request, CancellationToken cancellationToken = default);
+    Task<GitLabDeployKey> CreateForInstanceAsync(CreateInstanceDeployKeyRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return CreateAsync(
+            new CreateDeployKeyRequest { Key = request.Key, Title = request.Title, ExpiresAt = request.ExpiresAt },
+            cancellationToken);
+    }
 
     /// <summary>
     ///     Streams every project deploy key accessible to a user (<c>GET /users/:user_id/project_deploy_keys</c>),
     ///     across every project that user can access. Requires administrator access.
     /// </summary>
+    /// <param name="userId">The user's numeric ID.</param>
+    /// <param name="options">Optional pagination settings.</param>
+    /// <param name="cancellationToken">Cancels the enumeration between pages.</param>
     IAsyncEnumerable<GitLabDeployKey> ListForUserAsync(long userId,
+        UserProjectDeployKeyListOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Streams every project deploy key accessible to a user (<c>GET /users/:user_id/project_deploy_keys</c>),
+    ///     addressing that user by username rather than numeric ID. Requires administrator access.
+    /// </summary>
+    /// <param name="userId">The username accepted by GitLab's <c>user_id</c> route segment.</param>
+    /// <param name="options">Optional pagination settings.</param>
+    /// <param name="cancellationToken">Cancels the enumeration between pages.</param>
+    IAsyncEnumerable<GitLabDeployKey> ListForUserAsync(string userId,
         UserProjectDeployKeyListOptions? options = null, CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-using GitLab.Client.Models;
+using GitLab.Client.Models.Requests;
 
 namespace GitLab.Client.Abstractions;
 

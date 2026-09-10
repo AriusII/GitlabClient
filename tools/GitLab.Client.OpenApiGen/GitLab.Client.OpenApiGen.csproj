@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>GitLab.Client.OpenApiGen</AssemblyName>
+    <RootNamespace>GitLab.Client.OpenApiGen</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>
