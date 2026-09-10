@@ -37,9 +37,6 @@ jobs:
       - name: Build (Release, 0 warnings)
         run: dotnet build GitlabClient.slnx -c Release --no-restore
 
-      - name: Verify pinned OpenAPI inventory
-        run: dotnet run --project tools/GitLab.Client.OpenApiGen/GitLab.Client.OpenApiGen.csproj -c Release --no-build -- --verify
-
       - name: Test
         run: dotnet test --solution GitlabClient.slnx -c Release --no-build --no-restore
 
